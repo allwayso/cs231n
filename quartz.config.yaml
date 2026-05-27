@@ -1,0 +1,331 @@
+# yaml-language-server: $schema=./quartz/plugins/quartz-plugins.schema.json
+configuration:
+  pageTitle: CS231n 学习笔记
+  pageTitleSuffix: ""
+  enableSPA: true
+  enablePopovers: true
+  analytics:
+    provider: plausible
+  locale: zh-CN
+  baseUrl: https://allwayso.github.io/cs231n
+  ignorePatterns:
+    - private
+    - templates
+    - .obsidian
+  theme:
+    fontOrigin: googleFonts
+    cdnCaching: true
+    typography:
+      header: Newsreader        # 饱满、端庄的英文衬线体，与中文宋体极为呼应
+      body: "Noto Serif SC"     # 思源宋体
+      code: "Fira Code"         # 保持不变
+    colors:
+      lightMode:
+        light: "#fdf6e3"
+        lightgray: "#eee8d5"
+        gray: "#93a1a1"
+        darkgray: "#586e75"
+        dark: "#073642"
+        secondary: "#268bd2"
+        tertiary: "#2aa198"
+        highlight: rgba(101, 123, 131, 0.15)
+        textHighlight: "#b5890055"
+      darkMode:
+        light: "#232a2e"
+        lightgray: "#2d353b"
+        gray: "#9da9a0"
+        darkgray: "#d3c6aa"
+        dark: "#d3c6aa"
+        secondary: "#7fbbb3"
+        tertiary: "#83c092"
+        highlight: rgba(84, 58, 72, 0.3)
+        textHighlight: "#543a4855"
+plugins:
+  # ── Transformers ──────────────────────────────────────────────
+  - source:
+      repo: github:saberzero1/quartz-themes
+      subdir: plugin
+    enabled: false
+    options:
+      theme: rose-pine
+      mode: dark # 强制指定为 dark 模式，通常可以解决双模式覆盖失败的问题
+    order: 3
+
+  - source: github:quartz-community/created-modified-date
+    enabled: true
+    options:
+      defaultDateType: modified
+      priority:
+        - frontmatter
+        - git
+        - filesystem
+    order: 10
+
+  - source: github:quartz-community/syntax-highlighting
+    enabled: true
+    options:
+      theme:
+        light: github-light
+        dark: github-dark
+      keepBackground: false
+    order: 20
+
+  - source: github:quartz-community/obsidian-flavored-markdown
+    enabled: true
+    options:
+      enableInHtmlEmbed: false
+      enableCheckbox: true
+    order: 30
+
+  - source: github:quartz-community/github-flavored-markdown
+    enabled: true
+    order: 40
+
+  - source: github:quartz-community/table-of-contents
+    enabled: true
+    order: 50
+
+  - source: github:quartz-community/crawl-links
+    enabled: true
+    options:
+      markdownLinkResolution: shortest
+    order: 60
+
+  - source: github:quartz-community/description
+    enabled: true
+    order: 70
+
+  - source: github:quartz-community/latex
+    enabled: true
+    options:
+      renderEngine: katex
+    order: 80
+
+  - source: github:quartz-community/citations
+    enabled: false
+    order: 85
+
+  - source: github:quartz-community/hard-line-breaks
+    enabled: true
+    order: 90
+
+  - source: github:quartz-community/ox-hugo
+    enabled: false
+    order: 91
+
+  - source: github:quartz-community/roam
+    enabled: false
+    order: 92
+
+  # ── Filters & Emitters ────────────────────────────────────────
+  - source: github:quartz-community/remove-draft
+    enabled: true
+
+  - source: github:quartz-community/explicit-publish
+    enabled: true
+
+  - source: github:quartz-community/alias-redirects
+    enabled: true
+
+  - source: github:quartz-community/unlisted-pages
+    enabled: true
+    options: {}
+    order: 45
+
+  - source: github:quartz-community/encrypted-pages
+    enabled: true
+    options:
+      iterations: 600000
+      passwordField: password
+      unlistWhenEncrypted: false
+      outputPath: static/encryptedContentIndex.json
+    order: 900
+    layout:
+      position: body
+      priority: 100
+      display: all
+
+  # ── Content Emitters ──────────────────────────────────────────
+  - source: github:quartz-community/content-index
+    enabled: true
+    options:
+      enableSiteMap: true
+      enableRSS: true
+
+  - source: github:quartz-community/favicon
+    enabled: true
+
+  - source: github:quartz-community/og-image
+    enabled: true
+
+  - source: github:quartz-community/cname
+    enabled: true
+
+  - source: github:quartz-community/canvas-page
+    enabled: true
+
+  - source: github:quartz-community/content-page
+    enabled: true
+
+  - source: github:quartz-community/folder-page
+    enabled: true
+
+  - source: github:quartz-community/tag-page
+    enabled: true
+
+  - source: github:quartz-community/bases-page
+    enabled: true
+    options: {}
+    order: 50
+
+  # ── Layout Components ─────────────────────────────────────────
+  - source: github:quartz-community/explorer
+    enabled: true
+    layout:
+      position: left
+      priority: 50
+
+  - source: github:quartz-community/graph
+    enabled: true
+    layout:
+      position: right
+      priority: 10
+
+  - source: github:quartz-community/search
+    enabled: true
+    layout:
+      position: left
+      priority: 20
+      group: toolbar
+      groupOptions:
+        grow: true
+
+  - source: github:quartz-community/backlinks
+    enabled: true
+    layout:
+      position: right
+      priority: 30
+
+  - source: github:quartz-community/article-title
+    enabled: true
+    layout:
+      position: beforeBody
+      priority: 10
+
+  - source: github:quartz-community/content-meta
+    enabled: true
+    layout:
+      position: beforeBody
+      priority: 20
+
+  - source: github:quartz-community/tag-list
+    enabled: false
+    layout:
+      position: beforeBody
+      priority: 30
+
+  - source: github:quartz-community/page-title
+    enabled: true
+    layout:
+      position: left
+      priority: 10
+
+  - source: github:quartz-community/darkmode
+    enabled: true
+    layout:
+      position: left
+      priority: 30
+      group: toolbar
+
+  - source: github:quartz-community/reader-mode
+    enabled: true
+    layout:
+      position: left
+      priority: 35
+      group: toolbar
+
+  - source: github:quartz-community/breadcrumbs
+    enabled: true
+    layout:
+      position: beforeBody
+      priority: 5
+      condition: not-index
+
+  - source: github:quartz-community/comments
+    enabled: false
+    options:
+      provider: giscus
+      options: {}
+    layout:
+      position: afterBody
+      priority: 10
+
+  - source: github:quartz-community/footer
+    enabled: true
+    options:
+      links:
+        GitHub: https://github.com/jackyzha0/quartz
+        Discord Community: https://discord.gg/cRFFHYye7t
+
+  - source: github:quartz-community/recent-notes
+    enabled: false
+
+  - source: github:quartz-community/spacer
+    enabled: true
+    options: {}
+    order: 25
+    layout:
+      position: left
+      priority: 25
+      display: mobile-only
+
+  - source: github:quartz-community/note-properties
+    enabled: true
+    options:
+      includeAll: false
+      includedProperties:
+        - description
+        - tags
+        - aliases
+      excludedProperties: []
+      hidePropertiesView: false
+      delimiters: ---
+      language: yaml
+    order: 5
+    layout:
+      position: beforeBody
+      priority: 15
+      display: all
+
+  - source: github:quartz-community/stacked-pages
+    enabled: false
+    layout:
+      position: afterBody
+      priority: 50
+      display: all
+
+layout:
+  groups:
+    toolbar:
+      priority: 35
+      direction: row
+      gap: 0.5rem
+  byPageType:
+    "404":
+      positions:
+        beforeBody: []
+        left: []
+        right: []
+    content: {}
+    folder:
+      exclude:
+        - reader-mode
+      positions:
+        right: []
+    tag:
+      exclude:
+        - reader-mode
+      positions:
+        right: []
+    canvas: {}
+    bases: {}

@@ -1,5 +1,6 @@
 ---
 title: CS231n 课程笔记
+publish: true
 ---
 
 # CS231n: Convolutional Neural Networks for Visual Recognition

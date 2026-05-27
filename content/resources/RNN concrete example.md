@@ -1,3 +1,8 @@
+---
+title: RNN Concrete Example
+publish: true
+---
+
 ### 任务
 
 用RNN完成目标序列中连续出现的1的检测

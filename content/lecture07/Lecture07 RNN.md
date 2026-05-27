@@ -1,3 +1,8 @@
+---
+title: "Lecture 07: RNN"
+publish: true
+---
+
 ## 序列建模 (Sequence Modeling)
 
 视频重点介绍了序列建模的四种主要模式，突破了固定尺寸输入输出的限制：
