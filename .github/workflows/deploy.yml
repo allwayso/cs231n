@@ -36,8 +36,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Quartz plugins
+        run: node ./quartz/bootstrap-cli.mjs plugin install --from-config
+
       - name: Build Quartz site
         run: node ./quartz/bootstrap-cli.mjs build
+
 
 
       - name: Upload artifact
