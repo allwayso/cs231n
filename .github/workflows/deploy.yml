@@ -3,17 +3,13 @@ name: Deploy Quartz site to GitHub Pages
 on:
   push:
     branches: [main]
-
-  # 允许手动触发
   workflow_dispatch:
 
-# 设置 GITHUB_TOKEN 权限以部署到 GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# 只允许一个并发部署
 concurrency:
   group: "pages"
   cancel-in-progress: false
@@ -33,16 +29,24 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Restore Quartz cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .quartz/plugins
+            .quartz-cache
+          key: ${{ runner.os }}-quartz-${{ hashFiles('quartz.lock.json', 'quartz.config.default.yaml', 'quartz.config.ts', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-quartz-
+
       - name: Install dependencies
         run: npm ci
 
       - name: Install Quartz plugins
-        run: node ./quartz/bootstrap-cli.mjs plugin install --from-config
+        run: node ./quartz/bootstrap-cli.mjs plugin install --clean
 
       - name: Build Quartz site
         run: node ./quartz/bootstrap-cli.mjs build
-
-
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
