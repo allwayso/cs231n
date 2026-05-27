@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=./quartz/plugins/quartz-plugins.schema.json
 configuration:
-  pageTitle: CS231n 学习笔记
+  pageTitle: Notes by Allwayso
   pageTitleSuffix: ""
   enableSPA: true
   enablePopovers: true

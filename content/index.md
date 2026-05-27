@@ -1,14 +1,11 @@
 ---
-title: CS231n 课程笔记
+title: CS231n Notes
 publish: true
 ---
 
-# CS231n: Convolutional Neural Networks for Visual Recognition
-
-这是斯坦福大学 CS231n 课程（2024/2025）的学习笔记，涵盖了计算机视觉与深度学习的基础与核心内容。
+这是[斯坦福大学 CS231n 课程（2024/2025）](https://cs231n.stanford.edu/index.html)的学习笔记，由于基于[Slide](https://cs231n.stanford.edu/slides/2026/)的[Course Material](https://cs231n.github.io/)在第七章之后有所缺失，所以进行了一些补充。
 
 ## 笔记目录
-
 
 - [Lecture 07: RNN](Lecture07%20RNN)
 
