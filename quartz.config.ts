@@ -11,7 +11,7 @@ const config: QuartzConfig = {
       provider: "plausible",
     },
     locale: "zh-CN",
-    baseUrl: "allwayso.github.io/cs231n",
+     baseUrl: "https://allwayso.github.io/cs231n",
     ignorePatterns: ["private", "templates", ".obsidian"],
     theme: {
       fontOrigin: "googleFonts",
