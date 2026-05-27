@@ -1,1 +1,0 @@
-这里提出了优化权重矩阵以降低损失的思想，提出了两种计算梯度的方式，公式推导参见[gradcompute](https://cs231n.github.io/optimization-1/#gradcompute)，代码实现参见Q2 softmax classifier

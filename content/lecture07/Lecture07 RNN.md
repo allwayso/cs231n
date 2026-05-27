@@ -44,8 +44,8 @@ BPTT的梯度计算非常直接：$$\delta_t = \frac{\partial L_t}{\partial h_t}
 
 截断反向传播将序列分为n个块，对于每个块的最后一个时间步，其梯度为：$$ \delta_k = \frac{\partial L_k}{\partial h_k} $$
 在同一个块内(设其大小为k），其前面的时间步的梯度计算公式为：
-$$\delta_t = \frac{\partial L_t}{\partial h_t} + \left( \frac{\partial h_{t+1}}{\partial h_t} \right)^\top \delta_{t+1},
-\quad t = k-1, \dots, 1$$
+
+$$\delta_t = \frac{\partial L_t}{\partial h_t} + \left( \frac{\partial h_{t+1}}{\partial h_t} \right)^\top \delta_{t+1},\quad t = k-1, \dots, 1$$
 
 > 这里体现出与BPTT的区别：BPTT中某一个时间步的梯度会传递到前序所有时间步，而截断BPTT只影响于所在块内前序时间步。也就是说，梯度不会跨块传递。
 > 可以看出截断BPTT基于一个假设：间隔较远的时间步对梯度的贡献可以忽略不计。
@@ -111,7 +111,6 @@ Embedding layer 在逻辑上就是一个矩阵E，与独热编码相乘得到稠
         <img src="Pasted image 20260526210318.png" width="400" />
         <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 6：Image caption : CNN提取特征后输入RNN</div>
     </div>
-
     <!-- 第二张图 -->
     <div style="text-align: center;">
         <img src="Pasted image 20260526210853.png" width="400" />
@@ -126,7 +125,6 @@ Embedding layer 在逻辑上就是一个矩阵E，与独热编码相乘得到稠
         <img src="Pasted image 20260526211154.png" width="400" />
         <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 8：VLN（视觉语言路线规划）</div>
     </div>
-
     <!-- 第二张图 -->
     <div style="text-align: center;">
         <img src="Pasted image 20260526212012.png" width="400" />
