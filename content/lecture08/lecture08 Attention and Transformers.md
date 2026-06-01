@@ -2,6 +2,19 @@
 title: "Lecture 08: Attention and Transformers"
 publish: true
 ---
+>[!SUMMARY] Table of Contents
+>    - [[lecture08 Attention and Transformers#Recap of recursive neural network|Recap of recursive neural network]]
+>    - [[lecture08 Attention and Transformers#Seq2seq with Attention|Seq2seq with Attention]]
+>    - [[lecture08 Attention and Transformers#From Seq2seq Attention to General Attention Layer|From Seq2seq Attention to General Attention Layer]]
+>        - [[lecture08 Attention and Transformers#1. Single Query Attention|1. Single Query Attention]]
+>        - [[lecture08 Attention and Transformers#2. Multiple Queries|2. Multiple Queries]]
+>        - [[lecture08 Attention and Transformers#3. Saperate X into Keys and Values|3. Saperate X into Keys and Values]]
+>    - [[lecture08 Attention and Transformers#Different forms of self-attention|Different forms of self-attention]]
+>        - [[lecture08 Attention and Transformers#Positional Encoding or Rotary Position Embedding|Positional Encoding or Rotary Position Embedding]]
+>        - [[lecture08 Attention and Transformers#Masked Self-Attention|Masked Self-Attention]]
+>        - [[lecture08 Attention and Transformers#Multi-Head Self-Attention|Multi-Head Self-Attention]]
+>    - [[lecture08 Attention and Transformers#Self-Attention as Four Matrix Multiplications|Self-Attention as Four Matrix Multiplications]]
+
 
 ## Recap of recursive neural network
 
