@@ -79,7 +79,7 @@ $$\delta_t = \frac{\partial L_t}{\partial h_t} + \left( \frac{\partial h_{t+1}}{
     <img src="Pasted image 20260526215334.png" width="600" />
     <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 X：LSTM 示意图</div>
 </div>
-这里课程并没有详细展开LSTM，但是可以参考[ Understanding LSTM Networks -- colah's blog](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)，Colah 的博客中详细解释了LSTM中各个门的机制
+这里课程并没有详细展开LSTM，但是可以参考[Understanding LSTM Networks -- colah's blog](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)，Colah 的博客中详细解释了LSTM中各个门的机制
 
 > 事实上，下面展示的 RNN 成果大多数都是由 LSTM 及其变体创造的
 

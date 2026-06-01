@@ -8,4 +8,4 @@ publish: true
 ## 笔记目录
 
 - [Lecture 07: RNN](Lecture07%20RNN)
-
+- [Lecture 08: Attention and Transformers](Lecture08%20Attention%20and%20Transformers)
