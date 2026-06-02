@@ -2,6 +2,7 @@
 title: "Lecture 08: Attention and Transformers"
 publish: true
 ---
+
 >[!SUMMARY] Table of Contents
 >    - [[lecture08 Attention and Transformers#Seq2seq example|Seq2seq example]]
 >        - [[lecture08 Attention and Transformers#seq2seq with RNNs|seq2seq with RNNs]]
