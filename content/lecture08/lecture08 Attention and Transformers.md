@@ -3,8 +3,9 @@ title: "Lecture 08: Attention and Transformers"
 publish: true
 ---
 >[!SUMMARY] Table of Contents
->    - [[lecture08 Attention and Transformers#Recap of recursive neural network|Recap of recursive neural network]]
->    - [[lecture08 Attention and Transformers#Seq2seq with Attention|Seq2seq with Attention]]
+>    - [[lecture08 Attention and Transformers#Seq2seq example|Seq2seq example]]
+>        - [[lecture08 Attention and Transformers#seq2seq with RNNs|seq2seq with RNNs]]
+>        - [[lecture08 Attention and Transformers#Seq2seq with Attention|Seq2seq with Attention]]
 >    - [[lecture08 Attention and Transformers#From Seq2seq Attention to General Attention Layer|From Seq2seq Attention to General Attention Layer]]
 >        - [[lecture08 Attention and Transformers#1. Single Query Attention|1. Single Query Attention]]
 >        - [[lecture08 Attention and Transformers#2. Multiple Queries|2. Multiple Queries]]
@@ -13,10 +14,19 @@ publish: true
 >        - [[lecture08 Attention and Transformers#Positional Encoding or Rotary Position Embedding|Positional Encoding or Rotary Position Embedding]]
 >        - [[lecture08 Attention and Transformers#Masked Self-Attention|Masked Self-Attention]]
 >        - [[lecture08 Attention and Transformers#Multi-Head Self-Attention|Multi-Head Self-Attention]]
->    - [[lecture08 Attention and Transformers#Self-Attention as Four Matrix Multiplications|Self-Attention as Four Matrix Multiplications]]
+>        - [[lecture08 Attention and Transformers#Only Matrix Multiplies|Only Matrix Multiplies]]
+>    - [[lecture08 Attention and Transformers#The Transformer|The Transformer]]
+>        - [[lecture08 Attention and Transformers#Stacking Transformer Blocks|Stacking Transformer Blocks]]
+>        - [[lecture08 Attention and Transformers#Transformers for Language Modeling|Transformers for Language Modeling]]
+>        - [[lecture08 Attention and Transformers#Vision Transformers|Vision Transformers]]
+>    - [[lecture08 Attention and Transformers#Summary|Summary]]
+>    - [[lecture08 Attention and Transformers#Materials|Materials]]
 
 
-## Recap of recursive neural network
+## Seq2seq example
+
+seq2seq 任务指的是将一个输入序列映射为另一个输出序列的任务，例如机器翻译、文本摘要、语音识别等。它的核心特点是输入和输出都是序列，并且二者长度可以不同，因此模型需要先理解整个输入序列，再逐步生成目标序列
+### seq2seq with RNNs
 
 <div style="text-align: center;">
     <img src="Pasted image 20260601163921.png" width="800" />
@@ -36,7 +46,7 @@ publish: true
 > 那把上下文向量由定长换成变长不就行了？
 > 诚然，变长向量能够随着输入序列的增长而增长，从而避免了信息缺失的问题，但是信息瓶颈并不是 RNN seq2seq 的唯一问题。更大的问题是，无论上下文向量定长还是变长，Decoder 解码的时候都需要重点关注最相关内容，而不是整个向量。换句话说，我们需要一个可微分的寻址功能，这也就引入了注意力机制。
 
-## Seq2seq with Attention
+### Seq2seq with Attention
 
 <div style="text-align: center;">
     <img src="Pasted image 20260601173014.png" width="800" />
@@ -219,9 +229,9 @@ $$
 
 通常设 $D_H=D/H$，这样拼接后维度仍为 $D$。
 
-## Self-Attention as Four Matrix Multiplications
+### Only Matrix Multiplies
 
-实际实现中，Multi-Head Self-Attention 可以概括为四次主要矩阵乘法。
+实际运算中，Multi-Head Self-Attention 可以概括为四次主要矩阵乘法。
 
 <div style="text-align: center;">
     <img src="Pasted image 20260602002701.png" width="800" />
@@ -248,3 +258,108 @@ $$
 > 而当上下文窗口越来越大时，比如 GPT-3 的 32k 上下文，存储复杂度 $O(N^2)$ 的开销大于了并行带来的加速，所以现代 transformer 基本上都是在优化如何不完整存储 $N^2$ 矩阵 
 
 
+
+## The Transformer
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602114539.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 13：Transformer block</div>
+</div>
+
+Transformer 的基本单位是 Transformer Block，输入一组向量 $x_1,\dots,x_N$，输出一组向量 $y_1,\dots,y_N$。一个 block 通常包含 Multi-Head Self-Attention、Residual Connection、LayerNorm、MLP/FFN，再加一组 residual 和 LayerNorm。
+
+Tranformer Block中各个部件的作用：
+1. Self-Attention 是 block 中唯一让不同 token 交互的部分
+2. MLP 是逐 token 独立作用的，负责非线性变换，通常是两层全连接网络 $D\rightarrow4D\rightarrow D$，即 $\text{MLP}(x)=W_2\sigma(W_1x)$
+3. Residual Connection 保留原输入并学习增量更新
+4. LayerNorm 稳定训练
+
+经典 Post-Norm 写法可以概括为：
+
+$$
+X_1=\text{LayerNorm}(X+\text{SelfAttention}(X)),\quad Y=\text{LayerNorm}(X_1+\text{MLP}(X_1))
+$$
+
+现代实现常用 Pre-Norm，训练更稳定：
+
+$$
+X_1=X+\text{SelfAttention}(\text{LayerNorm}(X)),\quad Y=X_1+\text{MLP}(\text{LayerNorm}(X_1))
+$$
+
+Transformer 的核心：Self-Attention 负责 token 间通信，MLP 负责 token 内部变换，Residual 和 LayerNorm 负责稳定训练。
+
+### Stacking Transformer Blocks
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602114915.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 14：A Transformer is a stack of Transformer blocks</div>
+</div>
+
+完整 Transformer 是多个 Transformer Blocks 的堆叠：$X^{(0)}=X$，$X^{(l+1)}=\text{TransformerBlock}^{(l)}(X^{(l)})$，最终 $Y=X^{(L)}$。
+
+堆叠多层后，模型可以逐层构建更复杂的表示。Transformer 自 2017 年以来核心结构变化不大，但规模不断增大：更多层、更大隐藏维度、更多 heads、更长上下文。
+
+### Transformers for Language Modeling
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115101.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 15：Transformers for language modeling</div>
+</div>
+
+语言模型的目标是根据前面的 tokens 预测下一个 token。首先用 embedding matrix $E_{\text{embed}}\in\mathbb{R}^{V\times D}$ 把 token id 映射成 $D$ 维向量，得到输入 $X\in\mathbb{R}^{N\times D}$。
+
+之后将 $X$ 输入多个带 Masked Self-Attention 的 Transformer Blocks，保证第 $i$ 个 token 只能看到之前的 tokens。最后用 projection matrix $W_{\text{out}}\in\mathbb{R}^{D\times V}$ 映射回 vocabulary scores：
+
+$$
+S=YW_{\text{out}},\quad p(y_i\mid x_{\leq i})=\text{softmax}(S_i)
+$$
+
+训练时使用 cross-entropy loss 预测下一个 token。
+
+### Vision Transformers
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 16：Vision Transformer pipeline</div>
+</div>
+
+Vision Transformer，简称 ViT，把图像切成 patches，并把每个 patch 当作一个 token。例如输入图像为 $224\times224\times3$，patch size 为 $16\times16\times3$，每个 patch 展平后维度为 $16\times16\times3=768$，再通过线性层映射到 $D$ 维。
+
+对于 $224\times224$ 图像和 $16\times16$ patch，共有 $14\times14=196$ 个 patches，因此 Transformer 的序列长度为 $196$。
+
+Patch embedding 也可以看作一个卷积操作：kernel size 为 $16\times16$，stride 为 $16$，输入通道为 $3$，输出通道为 $D$。ViT 还需要 positional encoding 来表示每个 patch 的二维位置。
+
+与语言模型不同，图像分类通常不需要 mask：每个 image patch 可以看见所有其他 patches，即使用普通 Self-Attention。
+
+## Summary
+
+从 RNN seq2seq 到 Transformer，可以看成逐级泛化：
+1. 固定 context vector 产生瓶颈；
+2. seq2seq attention 让 Decoder 动态读取 Encoder states；
+3. general attention 抽象为 query 对 data vectors 的读取；
+4. scaled dot-product attention 用矩阵乘法高效实现；
+5. cross-attention 让一个序列查询另一个序列；
+6. self-attention 让同一序列内部 tokens 相互查询；
+7. positional encoding / RoPE 补充顺序信息；
+8. masked self-attention 支持自回归语言建模；
+9. multi-head attention 从多个子空间建模关系；
+10. Transformer Block 将 attention、MLP、residual 和 LayerNorm 组合起来。
+
+Transformer 的核心是 Self-Attention，它让序列中每个 token 能够直接访问和整合所有其他 token 的信息；通过 堆叠多个 Transformer Blocks，模型逐层构建更复杂的表示。同时，每个 token 内部的 MLP 层 提供非线性变换，残差连接和 LayerNorm 保证训练稳定和信息流通 。
+
+| 模型结构           | 适用场景          | 优势                  | 劣势                      | 时间/内存复杂度 |
+| -------------- | ------------- | ------------------- | ----------------------- | -------- |
+| RNN            | 一维有序序列        | 天然适配时序数据            | 无法并行，隐藏状态必须按时间步依次计算     | $O(N)$   |
+| Convolution    | 规则网格数据、局部特征提取 | 支持并行计算，擅长捕捉局部模式     | 单层感受野有限，建模长距离依赖需堆叠大量网络层 | -        |
+| Self-Attention | 存在长距离依赖的序列数据  | 可直接关联全局所有token，并行度高 | 标准实现存在二次方复杂度，注意力矩阵占用内存大 | $O(N^2)$ |
+
+## Materials
+
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762)
+- [Neural Machine Translation by Jointly Learning to Align and Translate (Bahdanau et al., 2014)](https://arxiv.org/abs/1409.0473)
+- [Sequence to Sequence Learning with Neural Networks (Sutskever et al., 2014)](https://arxiv.org/abs/1409.3215)
+- [An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale (ViT)](https://arxiv.org/abs/2010.11929)
+- [RoFormer: Enhanced Transformer with Rotary Position Embedding (RoPE)](https://arxiv.org/abs/2104.09864)
+- [Layer Normalization (Ba et al., 2016)](https://arxiv.org/abs/1607.06450)
+- [CS231n 2024/2025 Lecture 8 Slides](https://cs231n.stanford.edu/slides/2025/lecture_8.pdf)
+- [The Illustrated Transformer (Jay Alammar)](https://jalammar.github.io/illustrated-transformer/)
