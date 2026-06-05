@@ -1,0 +1,27 @@
+.DS_Store
+.gitignore
+node_modules
+public
+prof
+tsconfig.tsbuildinfo
+.obsidian
+.quartz-cache
+private/
+.replit
+replit.nix
+.quartz/
+quartz/cli/tui/dist/
+
+# 与 content/ 重复的原始笔记目录
+notes/
+imgs/
+
+# 已从远程仓库移除的目录（本地保留）
+assignments/
+project/
+slides/
+resource/
+
+# 已从远程仓库移除的单个文件
+schedule for cs231.md
+学习原则.md
