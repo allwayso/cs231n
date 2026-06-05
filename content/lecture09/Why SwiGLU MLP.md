@@ -1,6 +1,7 @@
 ---
 title: "Why SwiGLU MLP"
 publish: true
+target: "从 LSTM 门控出发，经 GLU 泛化到 SwiGLU，剖析门控 FFN 比传统两层 MLP 更优的理论与实验依据"
 ---
 
 ## 从 LSTM 到门控思想

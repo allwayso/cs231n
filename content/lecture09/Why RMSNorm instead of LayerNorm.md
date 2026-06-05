@@ -1,6 +1,7 @@
 ---
 title: "Why RMSNorm Instead of LayerNorm"
 publish: true
+target: "分析 RMSNorm 去掉均值中心化后计算更快、性能相当甚至更优的原因，以及在现代 LLM 中的广泛采用"
 ---
 
 # RMSNorm vs LayerNorm

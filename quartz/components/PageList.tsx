@@ -68,6 +68,7 @@ export const PageList: QuartzComponent = ({ cfg, fileData, allFiles, limit, sort
       {list.map((page) => {
         const title = page.frontmatter?.title
         const tags = page.frontmatter?.tags ?? []
+        const target = page.frontmatter?.target ?? ""
 
         return (
           <li class="section-li">
@@ -78,10 +79,12 @@ export const PageList: QuartzComponent = ({ cfg, fileData, allFiles, limit, sort
                   <a
                     href={resolveRelative(fileData.slug!, page.slug!)}
                     class="internal internal-link"
+                    {...(target ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                   >
                     {title}
                   </a>
                 </h3>
+                {target && <p class="target">{target}</p>}
               </div>
               <ul class="tags">
                 {tags.map((tag) => (

@@ -1,6 +1,7 @@
 ---
-title: "lecture09 Object Detection, Image Segmentation, Visualizing"
+title: "lecture09  Object Detection, Image Segmentation, Visualizing"
 publish: true
+target: "CS231n Lecture 09 主线笔记：目标检测、图像分割与模型可视化，并补充 Pre-Norm、RMSNorm、SwiGLU、MoE 四种 Transformer 改进"
 ---
 
 >[!SUMMARY] Table of Contents

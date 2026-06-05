@@ -1,6 +1,7 @@
 ---
 title: "Why Pre-Norm Better Than Post-Norm"
 publish: true
+target: "解析为何将 LayerNorm 放在残差分支内（Pre-Norm）比放在加法之后（Post-Norm）训练更稳定、梯度更平滑"
 ---
 
 # Pre-Norm vs Post-Norm
