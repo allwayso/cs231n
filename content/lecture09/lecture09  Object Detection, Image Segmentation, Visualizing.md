@@ -11,7 +11,31 @@ target: "CS231n Lecture 09 主线笔记：目标检测、图像分割与模型�
 >        - [[lecture09  Object Detection, Image Segmentation, Visualizing#SwiGLU MLP|SwiGLU MLP]]
 >        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Mixture of Experts (MoE)|Mixture of Experts (MoE)]]
 >        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Tweaking Transformers 小结|Tweaking Transformers 小结]]
->        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Materials|Materials]]
+>    - [[lecture09  Object Detection, Image Segmentation, Visualizing#Computer Vision Tasks Overview|Computer Vision Tasks Overview]]
+>    - [[lecture09  Object Detection, Image Segmentation, Visualizing#Semantic Segmentation|Semantic Segmentation]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Semantic Segmentation Ideas|Semantic Segmentation Ideas]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Fully Convolutional Networks|Fully Convolutional Networks]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Upsampling Methods|Upsampling Methods]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#U-Net|U-Net]]
+>    - [[lecture09  Object Detection, Image Segmentation, Visualizing#Object Detection|Object Detection]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Single Object: Classification + Localization|Single Object: Classification + Localization]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Multiple Objects: Sliding Window|Multiple Objects: Sliding Window]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Region Proposals: Selective Search|Region Proposals: Selective Search]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#R-CNN|R-CNN]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Fast R-CNN|Fast R-CNN]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Faster R-CNN: Region Proposal Network|Faster R-CNN: Region Proposal Network]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Single-Stage Object Detectors: YOLO / SSD / RetinaNet|Single-Stage Object Detectors: YOLO / SSD / RetinaNet]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#DETR: Object Detection with Transformers|DETR: Object Detection with Transformers]]
+>    - [[lecture09  Object Detection, Image Segmentation, Visualizing#Instance Segmentation|Instance Segmentation]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Mask R-CNN|Mask R-CNN]]
+>    - [[lecture09  Object Detection, Image Segmentation, Visualizing#Visualization & Understanding|Visualization & Understanding]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#First Layer Filters|First Layer Filters]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Saliency Maps|Saliency Maps]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Class Activation Mapping (CAM)|Class Activation Mapping (CAM)]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Grad-CAM|Grad-CAM]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Visualizing ViT Features|Visualizing ViT Features]]
+>    - [[lecture09  Object Detection, Image Segmentation, Visualizing#Summary|Summary]]
+>    - [[lecture09  Object Detection, Image Segmentation, Visualizing#Materials|Materials]]
 
 ## Recap of Tweaking Transformers
 
@@ -108,8 +132,8 @@ $$
 ### Mixture of Experts (MoE)
 
 <div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 20：Mixture of Experts 结构</div>
+    <img src="Pasted image 20260606161843.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 5：Mixture of Experts 结构</div>
 </div>
 
 标准 Transformer 中，每个 block 只有一组 MLP 权重。**Mixture of Experts (MoE)** 在每个 block 中学习 $E$ 组独立的 MLP 权重，每组 MLP 称为一个"专家"（expert）：
@@ -151,6 +175,599 @@ Transformer 自 2017 年以来核心架构未发生根本变化，但以下改�
 - [Root Mean Square Layer Normalization (Zhang & Sennrich, NeurIPS 2019)](https://arxiv.org/abs/1910.07467)
 - [GLU Variants Improve Transformers (Shazeer, 2020)](https://arxiv.org/abs/2002.05202)
 - [Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer (Shazeer et al., 2017)](https://arxiv.org/abs/1701.06538)
+
+---
+
+## Computer Vision Tasks Overview
+
+计算机视觉领域的核心任务可以分为四类，按从粗粒度到细粒度的顺序：
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260606163232.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 6：Four Major Tasks for CV</div>
+</div>
+
+1. **Classification（图像分类）**：判断图像"是什么"，输出整张图的类别标签，不包含空间信息
+2. **Semantic Segmentation（语义分割）**：对图像中的每个像素进行分类，区分"猫、草地、树、天空"等不同语义类别，但不区分同一类别的不同实例
+3. **Object Detection（目标检测）**：识别图像中每个物体的类别及其空间位置（边界框），区分同一类别的不同实例
+4. **Instance Segmentation（实例分割）**：最细粒度的任务，既要检测出每个物体，又要为每个实例生成像素级别的 mask
+
+其中图像分类已经在 CNN 等章节讨论过了，本章主要讨论后三种计算机视觉任务。
+
+---
+
+## TASK1：Semantic Segmentation
+
+语义分割的目标是为图像的每一个像素预测一个类别标签。与图像分类只输出一个全局标签不同，语义分割需要输出与输入图像相同尺寸的密集预测（dense prediction）。也就是说，这是一个N2N的任务。
+
+### Sliding Window
+
+最朴素的方法是 **Sliding Window**：以每个像素为中心取一个小 patch（包含周围上下文），送入 CNN 对该中心像素进行分类。
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260606163421.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 7：Sliding Window 方法：对每个像素取周围 patch，用 CNN 分类该中心像素</div>
+</div>
+
+> Sliding Window 语义分割有什么问题？
+> 非常低效！每个像素都需要独立运行一次 CNN，计算量极大，而且相邻像素的 patch 高度重叠，大量计算被浪费。更重要的是，patch 大小的选择意味着感受野与效率之间的 trade-off——patch 太小则信息不足，太大则更加低效。
+
+### Fully Convolutional Networks
+
+**核心思想**：设计一个全卷积网络，输入任意尺寸图像，输出相同空间尺寸的预测。网络前半部分为下采样（标准卷积 + pooling），用于提取语义特征；后半部分为上采样，用于恢复空间分辨率。
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260606164715.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 8：Fully Convolutional Network：Downsampling → Upsampling 架构</div>
+</div>
+
+典型设计：输入图像 $\mathbb{R}^{3\times H\times W}$ → 经过卷积和池化下采样 → 低分辨率高通道特征图 → 上采样层恢复至原始尺寸 → 输出 $\mathbb{R}^{C\times H\times W}$，其中 $C$ 为类别数。
+
+为了提取语义信息，我们自然而然选择池化层和卷积层进行下采样。下采样可以增大感受野、减少计算量，但代价是丢失了空间细节信息。如果是图像识别，经过足够多的卷积层之后再加上一个全连接层即可，但是对于语义分割任务而言，还需要把图像恢复到原有尺寸，这就需要上采样的过程。
+
+### Upsampling Methods
+
+将低分辨率特征图恢复到高分辨率的几种常见方法：
+
+<div style="display: flex; justify-content: center; gap: 20px; align-items: center;">
+    <!-- 第一张图 -->
+    <div style="text-align: center;">
+    <img src="Pasted image 20260606165930.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 9：Nearest Neighbor and Bed of Nails</div>
+</div>
+    <!-- 第二张图 -->
+    <div style="text-align: center;">
+    <img src="Pasted image 20260606170601.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 10：Max Unpooling 上采样</div>
+</div>
+</div>
+
+1. **Nearest Neighbor（最近邻插值）**：最简单的上采样方法，填充值为最近的像素值。无需学习参数，但会产生块状伪影
+
+2. **Bed of Nails**：又称为 zero insertion ，最暴力的上采样方式，将输入值放在对应位置，其余位置填充 0。简单但会产生稀疏的输出
+
+3. **Max Unpooling**：记录下采样时 max pooling 的最大值位置，上采样时将值放回原位置，其余位置填 0。相比 Bed of Nails，能更好地保留空间结构信息
+
+> Max Unpooling 相对于之前两种上采样的优势是什么？
+> Max Unpooling 利用了下采样阶段记录的最大值位置信息，使得上采样后的特征图能够在空间位置上更加匹配原始图像的结构。但由于 pooling 必然丢失非最大值位置的信息，仅靠 unpooling 仍然无法完全恢复细节。
+
+4. **Transposed Convolution ：可学习的上采样方法。给定一个输入，通过学习一个卷积核来"散布"输入值到更大的输出区域。
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260606235741.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 11：Transposed Convolution：可学习的上采样</div>
+</div>
+
+与普通卷积的 stride 对应：如果把 stride 理解为输入上的移动步长，那么转置卷积的 stride 则对应输出上的移动步长。对于 stride $>1$，输出尺寸会大于输入尺寸，实现上采样。
+
+> 什么是转置卷积？它与上采样后卷积的关系是什么？
+> 1. 转置卷积是普通卷积关于输入的梯度运算——通过插 0 + 可学习卷积核同时完成空间放大和特征精炼，两者**耦合**在同一操作中。Upsample+Conv 则是**解耦**方案：插值做空间放大（确定性的、不可学习），卷积做特征精炼（可学习）。
+> 2. 关键区别：转置卷积理论上表达力更强但容易产生 checkerboard 伪影（Odena 2016），Upsample+Conv 更稳定、实践中效果持平或更优。StyleGAN 的切换（Karras 2019）是现代实践的转折点。
+> 更详细的解析比较可以参考[[Upsample+Conv VS Transposed Conv]]，原课程的PPT对此做了一些精简，只提及了转置卷积而并未提到上采样+卷积
+
+### U-Net
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260607012815.png" width="600" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 12：U-Net 架构</div>
+</div>
+
+
+U-Net 在 FCN 的基础上加入了 **skip connections（跳跃连接）**，将下采样路径的特征图直接 **拼接** (Concatenate)到 **对应分辨率** 的上采样路径中。这种设计让网络在上采样时能够同时利用：
+- 深层的高语义特征（知道"是什么"）
+- 浅层的空间细节（知道"在哪里"）
+
+U-Net 最初用于生物医学图像分割，现已成为语义分割领域最经典的 backbone 之一，广泛应用于各种分割任务。
+
+### Semantic Segmentation 小结
+
+- Sliding window 虽直观但极其低效
+- Fully Convolutional Networks 采用 Downsampling + Upsampling 的端到端架构
+- 多种上采样方法（最近邻、Bed of Nails、Max Unpooling、转置卷积）各有优劣
+- U-Net 通过 skip connections 融合多层特征，显著提升分割精度
+
+> 语义分割的输出是一整张图，怎么设计损失函数呢？是不是对图像标注的要求很高？
+> 如果你也有类似的疑问，可以看看我的笔记 [[The loss function for semanic segmentation]]
+---
+
+## TASK2：Object Detection
+
+目标检测需要同时回答两个问题：**图中有什么物体**（分类）以及**它们分别在哪里**（定位）。这比单纯的图像分类或语义分割更复杂。以下从简单到复杂逐级演进。
+
+### Single Object: Classification + Localization
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 17：分类 + 定位：单目标场景</div>
+</div>
+
+对于只有单个物体的简单场景，我们可以将分类和定位合并为一个多任务学习（multitask learning）问题。网络共享 backbone 特征提取器，但有两个输出分支：
+
+- **分类分支**：输出 softmax 类别概率
+- **定位分支**：回归边界框的 4 个坐标 $(x, y, w, h)$
+
+训练时使用 **Multitask Loss**：
+
+$$
+L = L_{\text{class}}(\hat{y}, y) + \lambda L_{\text{reg}}(\hat{b}, b)
+$$
+
+其中 $L_{\text{class}}$ 是分类损失（如 cross-entropy），$L_{\text{reg}}$ 是回归损失（如 L2 或 smooth L1），$\lambda$ 是平衡两个损失的权重超参数。
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 18：Multitask Loss 训练示意</div>
+</div>
+
+### Multiple Objects: Sliding Window
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 19：多目标场景：图中有多个物体需要检测和定位</div>
+</div>
+
+当图像中包含多个物体时，单目标方法不再适用。一个朴素的想法是：用 Sliding Window 在图像上滑动不同尺度和宽高比的窗口，对每个窗口运行分类 + 定位。
+
+> Sliding Window 多目标检测有什么问题？
+> 1. 需要尝试**所有位置、所有尺度、所有宽高比**，窗口数量庞大，计算极其低效
+> 2. 输入图像中物体可能呈现各种不同的形状和姿势，固定大小的窗口难以完全匹配
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 20：Sliding Window 的不同位置、尺度和宽高比</div>
+</div>
+
+### Region Proposals: Selective Search
+
+与其盲目地在所有位置和尺度上滑动窗口，不如先用算法生成少量"可能包含物体"的候选区域（region proposals），再对这些候选区域进行分类。
+
+**Selective Search** 是一种经典的区域提议算法（无需学习）：
+
+1. 基于像素的颜色/纹理/强度等低级特征进行过分割（over-segmentation）
+2. 迭代合并最相似的相邻区域
+3. 在多个尺度上生成不同大小的候选框
+4. 最终输出约 2000 个候选区域（显著少于滑动窗口）
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 21：Selective Search 生成候选区域</div>
+</div>
+
+### R-CNN
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 22：R-CNN 流程</div>
+</div>
+
+Girshick et al, "Rich feature hierarchies for accurate object detection and semantic segmentation", CVPR 2014
+
+R-CNN 将 Region Proposals 与 CNN 结合：
+
+1. 用 Selective Search 生成约 2000 个候选区域（RoI, Region of Interest）
+2. 将每个候选区域 warp/crop 到固定尺寸（如 $224\times224$）
+3. 每个区域独立输入 CNN 提取特征
+4. 对每个区域的特征用 SVM 分类 + 回归边界框修正
+
+> R-CNN 有什么问题？
+> 1. **极慢**：对每张图要运行约 2000 次 CNN 前向传播（train 时更慢）
+> 2. 训练是多阶段的：先训练 CNN，再训练 SVM，再训练 bbox regressor
+> 3. Selective Search 本身也很慢，且不可学习
+
+### Fast R-CNN
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 23：Fast R-CNN 架构</div>
+</div>
+
+Girshick, "Fast R-CNN", ICCV 2015
+
+Fast R-CNN 的核心改进：**共享 Backbone 特征提取**。不再对每个候选区域独立运行 CNN，而是：
+
+1. 将整张图像一次性通过 CNN backbone，得到全局特征图
+2. 使用 RoI Pooling（Region of Interest Pooling）从特征图上裁剪每个 proposal 对应的特征区域，并缩放到固定尺寸
+3. 所有 RoI 共享后续的全连接层
+4. 端到端联合训练分类和边界框回归
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 24：RoI Pooling：从共享特征图上裁剪并缩放 proposal 特征</div>
+</div>
+
+> Fast R-CNN 相比 R-CNN 快了多少？
+> 训练快约 9 倍，推理快约 200 倍。主要因为 backbone 特征只计算一次，所有 RoI 共享。
+> 但 Fast R-CNN 仍需依赖外部的 Selective Search 生成 region proposals，这一步成为新的速度瓶颈。
+
+### Faster R-CNN: Region Proposal Network
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 25：Faster R-CNN = RPN + Fast R-CNN</div>
+</div>
+
+Ren et al, "Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks", NeurIPS 2015
+
+Faster R-CNN 的关键创新：把 Region Proposal 也融入神经网络，提出了 **Region Proposal Network (RPN)**，替代慢速的 Selective Search。
+
+**整体架构**：
+1. 输入图像经 CNN backbone 得到共享特征图（如 $512\times20\times15$）
+2. RPN 在特征图上滑动，为每个位置生成 object proposals
+3. RoI Pooling 从特征图上裁剪每个 proposal 的区域
+4. 对每个 RoI 进行分类和边界框精修
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 26：RPN：在特征图每个位置预测 anchor 是否为物体</div>
+</div>
+
+**RPN 的工作方式**：
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 27：特征图每个位置放置不同尺度和宽高比的 K 个 anchor boxes</div>
+</div>
+
+在特征图的每个空间位置放置 $K$ 个不同尺度和宽高比的 **anchor boxes**（锚框），每个 anchor box 对应两个输出：
+
+- **Objectness score**（$K$ 个值）：该 anchor 是否包含物体（二分类）
+- **Box corrections**（$4K$ 个值）：对 anchor 到真实边界框的偏移量进行回归 $(dx, dy, dw, dh)$
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 28：按 objectness score 排序，取 top ~300 作为 proposals</div>
+</div>
+
+最终按 objectness score 排序，取 top ~300 个候选框作为 proposals 送入后续的检测网络。
+
+> Anchor boxes 的设计思想是什么？
+> Anchor boxes 本质上是一种"先验"：预定义一组常见尺度和宽高比的框，让网络只需要预测"锚框到真实框的偏移量"，而不是从零预测绝对坐标。这大大降低了回归的难度。
+
+Faster R-CNN 是一个**两阶段（two-stage）检测器**：第一阶段 RPN 生成 proposals，第二阶段对这些 proposals 进行分类和精修。两阶段检测器通常精度较高但速度较慢。
+
+### Single-Stage Object Detectors: YOLO / SSD / RetinaNet
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 29：Single-Stage 检测器：在网格上直接预测</div>
+</div>
+
+Redmon et al, "You Only Look Once: Unified, Real-Time Object Detection", CVPR 2016
+Liu et al, "SSD: Single-Shot MultiBox Detector", ECCV 2016
+Lin et al, "Focal Loss for Dense Object Detection", ICCV 2017
+
+与两阶段方法不同，**单阶段检测器** 跳过显式的 region proposal 步骤，直接在特征图上预测类别和边界框。
+
+**YOLO（You Only Look Once）** 的核心思想：
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 30：YOLO：将图像划分为 $S\times S$ 网格</div>
+</div>
+
+将输入图像划分为 $S\times S$ 的网格（如 $7\times7$），每个网格单元负责预测该位置的目标。对每个网格单元，输出：
+- **B 个边界框**（$B$ 通常为 2）：每个框包含 $(x, y, w, h, \text{confidence})$ 共 5 个值
+- **C 个类别概率**：$P(\text{class})$
+
+输出维度为 $S\times S\times (5B+C)$。
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 31：YOLO 每个网格输出 B 个 bbox 和 C 个类别概率</div>
+</div>
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 32：YOLO 输出大量候选框，按 objectness 过滤</div>
+</div>
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 33：YOLO 最终检测结果</div>
+</div>
+
+> 单阶段检测器 vs 两阶段检测器的 trade-off 是什么？
+> - **单阶段**（YOLO/SSD）：速度极快，适合实时应用，但精度略低，尤其对小物体不友好
+> - **两阶段**（Faster R-CNN）：精度更高，尤其对小物体更友好，但速度较慢
+> - RetinaNet 通过引入 **Focal Loss** 解决了单阶段检测器中类别不平衡（正负样本比例悬殊）的问题，大幅缩小了与两阶段方法的精度差距
+
+### DETR: Object Detection with Transformers
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 34：DETR：Transformer-based 目标检测</div>
+</div>
+
+Carion et al, "End-to-End Object Detection with Transformers", ECCV 2020
+
+DETR（DEtection TRansformer）将目标检测重新定义为集合预测（set prediction）问题，完全抛弃了 anchors、region proposals 和 NMS 等手工设计组件：
+
+1. CNN backbone 提取图像特征
+2. Transformer encoder-decoder 将特征图与一组可学习的 **object queries** 进行交互
+3. 每个 object query 直接输出一个预测结果（类别 + 边界框）或"无物体"标记
+4. 通过 **bipartite matching（匈牙利算法）** 将预测框与 ground-truth 框一一配对，进行端到端训练
+
+> DETR 的核心优势是什么？
+> 1. 端到端训练，无需 NMS 后处理
+> 2. 无需 anchor 等手工先验
+> 3. 架构简洁，直接输出固定数量的预测集合
+> 缺点是训练收敛较慢（需要数百个 epoch），后续工作如 Deformable DETR 等改善了收敛速度和精度
+
+---
+
+## TASK3：Instance Segmentation
+
+### Mask R-CNN
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 35：四大 CV 任务对比：实例分割是最细粒度的</div>
+</div>
+
+**实例分割** 结合了目标检测和语义分割：既要检测出每个物体（如 Faster R-CNN），又要为每个实例输出像素级的 mask（如语义分割）。
+
+He et al, "Mask R-CNN", ICCV 2017
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 36：Mask R-CNN：在 Faster R-CNN 基础上增加 mask prediction 分支</div>
+</div>
+
+**Mask R-CNN** 在 Faster R-CNN 的基础上增加了一个并行的 mask prediction 分支：
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 37：Mask R-CNN 网络结构</div>
+</div>
+
+整体流程：
+1. CNN + RPN 生成 proposals
+2. **RoI Align**（改进版 RoI Pooling）提取每个 proposal 的精确特征区域
+3. 三个并行分支：分类（$C$ 个分数）、边界框回归（$4C$ 个坐标）、Mask 预测（$C\times28\times28$）
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 38：Mask R-CNN 中 RoI Align 及 mask 分支细节</div>
+</div>
+
+> RoI Align 相比 RoI Pooling 有什么改进？
+> RoI Pooling 涉及两次量化操作（将浮点坐标取整），导致特征与原始图像位置不对齐（misalignment）。RoI Align 使用双线性插值，避免了量化误差，对于像素级精度的 mask 预测至关重要。
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 39：Mask R-CNN mask 训练目标示例</div>
+</div>
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 40：Mask R-CNN 分割结果非常好</div>
+</div>
+
+Mask R-CNN 还展示了极强的通用性：同样的架构稍加修改即可用于 **人体姿态估计（pose estimation）**，只需将 mask 分支替换为关键点回归分支。
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 41：Mask R-CNN 同时支持姿态估计</div>
+</div>
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 42：四大 CV 任务回顾总结</div>
+</div>
+
+---
+
+## Visualization & Understanding
+
+神经网络常被批评为"黑盒"。理解模型内部到底在做什么、哪些输入区域对预测最重要，对于调试、验证和信任模型至关重要。
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 43：本节概览：Transformers Recap → CV Tasks → Visualization & Understanding</div>
+</div>
+
+### First Layer Filters
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 44：线性分类器的可视化视角</div>
+</div>
+
+**可视化第一层卷积核** 是最直接的理解神经网络的方法。由于第一层输入是 RGB 图像，每个 $3\times\text{kernel size}\times\text{kernel size}$ 的卷积核可以直接可视化为图像。
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 45：不同架构第一层卷积核可视化（AlexNet / ResNet-18 / ResNet-101 / DenseNet-121）</div>
+</div>
+
+Krizhevsky, "One weird trick for parallelizing convolutional neural networks", arXiv 2014
+He et al, "Deep Residual Learning for Image Recognition", CVPR 2016
+Huang et al, "Densely Connected Convolutional Networks", CVPR 2017
+
+不同 CNN 架构的第一层滤波器表现出惊人的一致性：都学到了**定向边缘检测器**（不同方向的边缘）、**颜色检测器**（互补色对）和**纹理模式**。这与哺乳动物视觉皮层 V1 区的简单细胞功能惊人地相似。
+
+### Saliency Maps
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 46：Saliency via Backprop：哪些像素对预测最重要？</div>
+</div>
+
+Simonyan, Vedaldi, and Zisserman, "Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps", ICLR Workshop 2014
+
+**Saliency Maps（显著性图）** 回答的问题是：对于给定预测类别，输入图像的哪些像素影响最大？
+
+核心思想：计算目标类别得分对输入图像的梯度，取绝对值，在 RGB 通道上取最大值：
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 47：计算类别得分对图像像素的梯度</div>
+</div>
+
+$$
+\text{Saliency}_{i,j} = \max_c \left|\frac{\partial S_{\text{class}}}{\partial x_{i,j,c}}\right|
+$$
+
+其中 $S_{\text{class}}$ 是目标类别的得分（softmax 之前），$x_{i,j,c}$ 是位置 $(i,j)$ 处通道 $c$ 的像素值。
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 48：Saliency Maps 可视化示例</div>
+</div>
+
+> Saliency Maps 的直观理解？
+> 梯度越大的位置，表示像素值的微小变化对类别得分的影响越大——换句话说，模型在做决策时越"看重"这些像素。高亮区域就是模型做出当前判断的"关键证据"所在。
+
+### Class Activation Mapping (CAM)
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 49：Class Activation Mapping (CAM) 结构</div>
+</div>
+
+Zhou et al, "Learning Deep Features for Discriminative Localization", CVPR 2016
+
+**CAM** 专门针对使用 Global Average Pooling (GAP) + 全连接层作为分类头的 CNN。其核心公式为：
+
+$$
+S_c = \sum_k w_{k,c} F_k = \sum_k w_{k,c} \left(\frac{1}{HW}\sum_{h,w} f_{h,w,k}\right) = \frac{1}{HW} \sum_{h,w} \underbrace{\sum_k w_{k,c} f_{h,w,k}}_{\text{CAM}_{h,w,c}}
+$$
+
+其中 $f\in\mathbb{R}^{H\times W\times K}$ 是最后一层卷积特征图，$F_k$ 是第 $k$ 个通道的 GAP 值，$w_{k,c}$ 是全连接层中通道 $k$ 到类别 $c$ 的权重。
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 50：CAM 的热力图可视化</div>
+</div>
+
+**Class Activation Map** 为：
+
+$$
+M_{c,h,w} = \sum_k w_{k,c} f_{h,w,k}
+$$
+
+热力图 $M_c$ 直接反映了每个空间位置对类别 $c$ 的贡献，可以通过上采样叠加回原始图像生成可视化结果。
+
+> CAM 有什么局限性？
+> CAM 要求分类头必须是 GAP + 单层全连接层。如果网络在 GAP 后还有额外的全连接层，或者使用其他池化方式，就无法直接应用 CAM。这也催生了更通用的 Grad-CAM。
+
+### Grad-CAM
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 51：Gradient-Weighted Class Activation Mapping (Grad-CAM)</div>
+</div>
+
+Selvaraju et al, "Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization", CVPR 2017
+
+**Grad-CAM** 是 CAM 的泛化版本，不需要特定的网络结构，可以应用于**任意 CNN 的任意层**。
+
+算法步骤：
+
+1. 选取任意层，其激活图为 $A\in\mathbb{R}^{H\times W\times K}$
+
+2. 计算类别得分 $S_c$ 对激活图 $A$ 的梯度：$\frac{\partial S_c}{\partial A} \in\mathbb{R}^{H\times W\times K}$
+
+3. 对梯度做全局平均池化（GAP），得到每个通道的重要性权重 $\alpha_k$：
+
+   $$
+   \alpha_k = \frac{1}{HW}\sum_{h,w}\frac{\partial S_c}{\partial A_{h,w,k}}
+   $$
+
+4. 对激活图加权求和，并通过 ReLU 保留对目标类别有正贡献的区域：
+
+   $$
+   M_{h,w}^c = \text{ReLU}\left(\sum_k \alpha_k A_{h,w,k}\right)
+   $$
+
+> $\alpha_k$ 的含义是什么？
+> $\alpha_k$ 表示激活图第 $k$ 个通道对类别 $c$ 的"重要性"。梯度越大，说明该通道的微小变化对最终预测的影响越大。$\alpha_k$ 可以看作 CAM 中 $w_{k,c}$ 的梯度近似，使得 Grad-CAM 适用于任意网络结构。
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 52：Grad-CAM 可视化结果示例</div>
+</div>
+
+Grad-CAM 可以应用于不同深度的层：
+- **浅层**：热力图更细粒度，包含更多空间细节，但语义不明确
+- **深层**：热力图更粗粒度，语义更明确，突出最重要的判别区域
+
+### Visualizing ViT Features
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260602115336.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 53：Visualizing ViT features</div>
+</div>
+
+Chen et al, "When Vision Transformers Outperform ResNets Without Pre-training or Strong Data Augmentations", ICLR 2022
+Paul and Chen, "Vision Transformers are Robust Learners", AAAI 2022
+
+ViT 的特征可视化与 CNN 有本质不同。由于 ViT 使用自注意力机制，其感受野从一开始就是全局的（而非 CNN 的局部感受野逐层扩大）。ViT 不同层的 attention map 可视化可以揭示模型关注图像哪些区域来进行判断。
+
+---
+
+## Summary
+
+Lecture 09 涵盖了从 Transformer 改进到计算机视觉任务再到模型可视化的完整脉络：
+
+**Transformer 改进（Recap）**：
+- Pre-Norm → 训练更稳定
+- RMSNorm → 计算更快
+- SwiGLU MLP → 门控机制提升性能
+- MoE → 稀疏激活，大参数量、适度计算量
+
+**计算机视觉任务**：
+
+| 任务 | 输出 | 方法演进 |
+|------|------|----------|
+| **Semantic Segmentation** | 逐像素类别标签 | Sliding Window → FCN → U-Net (+ skip connections) |
+| **Object Detection** | 边界框 + 类别 | R-CNN → Fast R-CNN → Faster R-CNN (RPN) → YOLO/SSD (single-stage) → DETR (Transformer) |
+| **Instance Segmentation** | 边界框 + 逐实例 mask | Mask R-CNN（在 Faster R-CNN 上加 mask 分支） |
+
+**模型可视化**：
+- **First Layer Filters**：可视化卷积核，发现边缘/颜色/纹理检测器
+- **Saliency Maps**：通过梯度反向传播找到关键像素
+- **CAM**：通过 GAP 权重加权特征图，但仅适用于特定网络结构
+- **Grad-CAM**：CAM 的泛化版本，适用于任意 CNN 的任意层
+- **ViT Features**：自注意力机制的可视化揭示全局感受野特性
+
+## Materials
+
+- [Fully Convolutional Networks for Semantic Segmentation (Long et al., CVPR 2015)](https://arxiv.org/abs/1411.4038)
+- [U-Net: Convolutional Networks for Biomedical Image Segmentation (Ronneberger et al., MICCAI 2015)](https://arxiv.org/abs/1505.04597)
+- [Rich feature hierarchies for accurate object detection and semantic segmentation (Girshick et al., CVPR 2014)](https://arxiv.org/abs/1311.2524)
+- [Fast R-CNN (Girshick, ICCV 2015)](https://arxiv.org/abs/1504.08083)
+- [Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks (Ren et al., NeurIPS 2015)](https://arxiv.org/abs/1506.01497)
+- [You Only Look Once: Unified, Real-Time Object Detection (Redmon et al., CVPR 2016)](https://arxiv.org/abs/1506.02640)
+- [SSD: Single-Shot MultiBox Detector (Liu et al., ECCV 2016)](https://arxiv.org/abs/1512.02325)
+- [Focal Loss for Dense Object Detection (Lin et al., ICCV 2017)](https://arxiv.org/abs/1708.02002)
+- [End-to-End Object Detection with Transformers (Carion et al., ECCV 2020)](https://arxiv.org/abs/2005.12872)
+- [Mask R-CNN (He et al., ICCV 2017)](https://arxiv.org/abs/1703.06870)
+- [Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps (Simonyan et al., ICLR Workshop 2014)](https://arxiv.org/abs/1312.6034)
+- [Learning Deep Features for Discriminative Localization (Zhou et al., CVPR 2016)](https://arxiv.org/abs/1512.04150)
+- [Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization (Selvaraju et al., CVPR 2017)](https://arxiv.org/abs/1610.02391)
+- [When Vision Transformers Outperform ResNets (Chen et al., ICLR 2022)](https://arxiv.org/abs/2106.04560)
+- [CS231n 2024/2025 Lecture 9 Slides](https://cs231n.stanford.edu/slides/2025/lecture_9.pdf)
 
 
 
