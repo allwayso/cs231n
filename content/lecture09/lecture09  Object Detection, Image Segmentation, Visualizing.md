@@ -297,8 +297,8 @@ U-Net 最初用于生物医学图像分割，现已成为语义分割领域最�
 ### Single Object: Classification + Localization
 
 <div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 17：分类 + 定位：单目标场景</div>
+    <img src="Pasted image 20260607213843.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 13：分类 + 定位：单目标场景</div>
 </div>
 
 对于只有单个物体的简单场景，我们可以将分类和定位合并为一个多任务学习（multitask learning）问题。网络共享 backbone 特征提取器，但有两个输出分支：
@@ -314,28 +314,19 @@ $$
 
 其中 $L_{\text{class}}$ 是分类损失（如 cross-entropy），$L_{\text{reg}}$ 是回归损失（如 L2 或 smooth L1），$\lambda$ 是平衡两个损失的权重超参数。
 
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 18：Multitask Loss 训练示意</div>
-</div>
-
 ### Multiple Objects: Sliding Window
 
 <div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 19：多目标场景：图中有多个物体需要检测和定位</div>
+    <img src="Pasted image 20260607220448.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 14：多目标场景：图中有多个物体需要检测和定位</div>
 </div>
 
-当图像中包含多个物体时，单目标方法不再适用。一个朴素的想法是：用 Sliding Window 在图像上滑动不同尺度和宽高比的窗口，对每个窗口运行分类 + 定位。
+当图像中包含多个物体时，单目标方法不再适用。一个朴素的想法是：用 Sliding Window 在图像上滑动不同尺度和宽高比的窗口，对每个窗口运行一次 CNN 。
 
-> Sliding Window 多目标检测有什么问题？
-> 1. 需要尝试**所有位置、所有尺度、所有宽高比**，窗口数量庞大，计算极其低效
-> 2. 输入图像中物体可能呈现各种不同的形状和姿势，固定大小的窗口难以完全匹配
-
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 20：Sliding Window 的不同位置、尺度和宽高比</div>
-</div>
+ Sliding Window 多目标检测的问题主要有两点：
+ 
+1. 需要尝试**所有位置、所有尺度、所有宽高比**，窗口数量庞大，计算极其低效
+2. 输入图像中物体可能呈现各种不同的形状和姿势，固定大小的窗口难以完全匹配
 
 ### Region Proposals: Selective Search
 
@@ -349,96 +340,87 @@ $$
 4. 最终输出约 2000 个候选区域（显著少于滑动窗口）
 
 <div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 21：Selective Search 生成候选区域</div>
+    <img src="Pasted image 20260607223519.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 15：Selective Search 生成候选区域</div>
 </div>
 
 ### R-CNN
 
 <div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 22：R-CNN 流程</div>
+    <img src="Pasted image 20260607230405.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 16：R-CNN 流程</div>
 </div>
-
-Girshick et al, "Rich feature hierarchies for accurate object detection and semantic segmentation", CVPR 2014
 
 R-CNN 将 Region Proposals 与 CNN 结合：
 
 1. 用 Selective Search 生成约 2000 个候选区域（RoI, Region of Interest）
 2. 将每个候选区域 warp/crop 到固定尺寸（如 $224\times224$）
 3. 每个区域独立输入 CNN 提取特征
-4. 对每个区域的特征用 SVM 分类 + 回归边界框修正
+4. 对每个区域的特征用 SVM 分类 + Bbox Regression 回归边界框修正
 
-> R-CNN 有什么问题？
-> 1. **极慢**：对每张图要运行约 2000 次 CNN 前向传播（train 时更慢）
-> 2. 训练是多阶段的：先训练 CNN，再训练 SVM，再训练 bbox regressor
-> 3. Selective Search 本身也很慢，且不可学习
+R-CNN 有什么问题？
+
+1. **极慢**：对每张图要运行约 2000 次 CNN 前向传播（train 时更慢）
+2. 训练是多阶段的：先训练 CNN，再训练 SVM，再训练 bbox regressor
+3. Selective Search 本身也很慢，且不可学习
 
 ### Fast R-CNN
 
 <div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 23：Fast R-CNN 架构</div>
+    <img src="Pasted image 20260607232843.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 17：Fast R-CNN 架构</div>
 </div>
 
-Girshick, "Fast R-CNN", ICCV 2015
+R-CNN 对每个RoI都运行一次 CNN，而其中很大一部分是重叠的，如果能够提取一张全局特征图给所有RoI使用，将会大大减少 CNN 运算的次数。
 
-Fast R-CNN 的核心改进：**共享 Backbone 特征提取**。不再对每个候选区域独立运行 CNN，而是：
+这就是 Fast R-CNN 的核心改进：**共享 Feature Map**。不再对每个候选区域独立运行 CNN，而是：
 
 1. 将整张图像一次性通过 CNN backbone，得到全局特征图
-2. 使用 RoI Pooling（Region of Interest Pooling）从特征图上裁剪每个 proposal 对应的特征区域，并缩放到固定尺寸
-3. 所有 RoI 共享后续的全连接层
-4. 端到端联合训练分类和边界框回归
+2. 将 RoI 投影到特征图上 
+3. 使用 RoI Pooling（Region of Interest Pooling）从把投影的 RoI 缩放到固定尺寸
+4. 所有 RoI 共享后续的全连接层
+5. 训练分类和边界框回归
 
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 24：RoI Pooling：从共享特征图上裁剪并缩放 proposal 特征</div>
-</div>
-
-> Fast R-CNN 相比 R-CNN 快了多少？
-> 训练快约 9 倍，推理快约 200 倍。主要因为 backbone 特征只计算一次，所有 RoI 共享。
-> 但 Fast R-CNN 仍需依赖外部的 Selective Search 生成 region proposals，这一步成为新的速度瓶颈。
+> 如何用 RoI 裁剪特征图？RoI Pooling 是如何操作的？
+> 1. RoI 与特征图的匹配：ConvNet会保持空间特征，比如从 800×800 的原始图提取出 50×50 的特征图，这里的 Stride=800/50=16，只需要将RoI 的坐标值缩小相同的步长，即可找到与特征图相匹配
+> 2. RoI pooling：对于任意大小的 RoI，将其分成 K×K 的方格，对每个方格采用 Max pooling 下采样，将其变为固定尺寸
 
 ### Faster R-CNN: Region Proposal Network
 
 <div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 25：Faster R-CNN = RPN + Fast R-CNN</div>
+    <img src="Pasted image 20260608010605.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 18：Faster R-CNN = RPN + Fast R-CNN</div>
 </div>
 
-Ren et al, "Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks", NeurIPS 2015
+Fast R-CNN 优化了 CNN 的运算次数，但是却遇到两个问题：
+1. Selective Research 不可学习
+2. 由于其为 CPU 算法，比 CNN 慢了一个数量级
 
-Faster R-CNN 的关键创新：把 Region Proposal 也融入神经网络，提出了 **Region Proposal Network (RPN)**，替代慢速的 Selective Search。
+所以引入 Faster R-CNN 的关键创新：把 Region Proposal 也融入神经网络，提出了 **Region Proposal Network (RPN)**，替代慢速的 Selective Search。
 
 **整体架构**：
+
 1. 输入图像经 CNN backbone 得到共享特征图（如 $512\times20\times15$）
 2. RPN 在特征图上滑动，为每个位置生成 object proposals
 3. RoI Pooling 从特征图上裁剪每个 proposal 的区域
 4. 对每个 RoI 进行分类和边界框精修
 
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 26：RPN：在特征图每个位置预测 anchor 是否为物体</div>
-</div>
-
-**RPN 的工作方式**：
+Faster R-CNN 的关键就在于 **RPN 的工作机制**：
 
 <div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 27：特征图每个位置放置不同尺度和宽高比的 K 个 anchor boxes</div>
+    <img src="Pasted image 20260608014611.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 19：特征图每个位置放置不同尺度和宽高比的 K 个 Anchor boxes</div>
 </div>
 
-在特征图的每个空间位置放置 $K$ 个不同尺度和宽高比的 **anchor boxes**（锚框），每个 anchor box 对应两个输出：
-
-- **Objectness score**（$K$ 个值）：该 anchor 是否包含物体（二分类）
-- **Box corrections**（$4K$ 个值）：对 anchor 到真实边界框的偏移量进行回归 $(dx, dy, dw, dh)$
-
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 28：按 objectness score 排序，取 top ~300 作为 proposals</div>
-</div>
-
-最终按 objectness score 排序，取 top ~300 个候选框作为 proposals 送入后续的检测网络。
+ RPN 如何生成最终的 object proposals?
+ 
+1. 设置 Anchor : 对于每个中心，分别取 M 种尺寸和 N 种大小的矩形框，每个矩形框就是一个 Anchor
+2. 目标检测：与最终的 K 类别得分不同，只是对目标/背景进行二分类，与 Ground Truth(GT)计算 IoU ，对 IoU>0.7的标记为 1，IoU < 0.3 的标记为 0 (边缘)
+3. 边界框回归：只对标记为1的 Anchor 做回归
+4. 损失函数：对二分类和边界框分别计算损失，其中边界框回归与 GT 做交叉熵，得到得分 P(object)
+5. 初步处理：筛除低分 Anchor，并根据边界框回归的结果调整边界框
+6. Non-Maximum Suppression（NMS）去重：第一步按得分排名，第二步取最高分 Anchor，第三步把与高分重叠度 IoU>0.7 的 Anchor 删去，重复二三步直到处理完所有 Proposals
+7. 最终筛选：根据预设的超参数，选择固定数量的 Proposal 进入下一阶段
 
 > Anchor boxes 的设计思想是什么？
 > Anchor boxes 本质上是一种"先验"：预定义一组常见尺度和宽高比的框，让网络只需要预测"锚框到真实框的偏移量"，而不是从零预测绝对坐标。这大大降低了回归的难度。
@@ -500,7 +482,7 @@ Lin et al, "Focal Loss for Dense Object Detection", ICCV 2017
 
 Carion et al, "End-to-End Object Detection with Transformers", ECCV 2020
 
-DETR（DEtection TRansformer）将目标检测重新定义为集合预测（set prediction）问题，完全抛弃了 anchors、region proposals 和 NMS 等手工设计组件：
+DETR（DEtection TRansformer）将目标检测重新定义为集合预测（set prediction）问题，完全抛弃了 Anchors、region proposals 和 NMS 等手工设计组件：
 
 1. CNN backbone 提取图像特征
 2. Transformer encoder-decoder 将特征图与一组可学习的 **object queries** 进行交互
@@ -509,7 +491,7 @@ DETR（DEtection TRansformer）将目标检测重新定义为集合预测（set 
 
 > DETR 的核心优势是什么？
 > 1. 端到端训练，无需 NMS 后处理
-> 2. 无需 anchor 等手工先验
+> 2. 无需 Anchor 等手工先验
 > 3. 架构简洁，直接输出固定数量的预测集合
 > 缺点是训练收敛较慢（需要数百个 epoch），后续工作如 Deformable DETR 等改善了收敛速度和精度
 
