@@ -122,9 +122,9 @@
       "installedAt": "2026-05-27T12:34:11.492Z"
     },
     "folder-page": {
-      "source": "github:quartz-community/folder-page",
-      "resolved": "https://github.com/quartz-community/folder-page.git",
-      "commit": "a538b8e548a0215568942a3d94b042010a86d66b",
+      "source": "github:allwayso/folder-page",
+      "resolved": "https://github.com/allwayso/folder-page.git",
+      "commit": "2445c82b2037772c532dcc0fe3dd74598ab15b52",
       "installedAt": "2026-05-27T12:34:11.815Z"
     },
     "footer": {
