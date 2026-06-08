@@ -328,9 +328,13 @@ $$
 1. 需要尝试**所有位置、所有尺度、所有宽高比**，窗口数量庞大，计算极其低效
 2. 输入图像中物体可能呈现各种不同的形状和姿势，固定大小的窗口难以完全匹配
 
-### Region Proposals: Selective Search
+### Region Proposals: Selective Search，R-CNN，Fast R-CNN，Faster R-CNN
 
 与其盲目地在所有位置和尺度上滑动窗口，不如先用算法生成少量"可能包含物体"的候选区域（region proposals），再对这些候选区域进行分类。
+
+R-CNN，Fast R-CNN，Faster R-CNN 都是采用 Region Proposals 思想，将目标识别任务分为找到候选区域和识别候选区域类别这两个阶段。
+
+#### Selective Search
 
 **Selective Search** 是一种经典的区域提议算法（无需学习）：
 
@@ -344,7 +348,7 @@ $$
     <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 15：Selective Search 生成候选区域</div>
 </div>
 
-### R-CNN
+#### R-CNN
 
 <div style="text-align: center;">
     <img src="Pasted image 20260607230405.png" width="800" />
@@ -364,7 +368,7 @@ R-CNN 有什么问题？
 2. 训练是多阶段的：先训练 CNN，再训练 SVM，再训练 bbox regressor
 3. Selective Search 本身也很慢，且不可学习
 
-### Fast R-CNN
+#### Fast R-CNN
 
 <div style="text-align: center;">
     <img src="Pasted image 20260607232843.png" width="800" />
@@ -385,7 +389,7 @@ R-CNN 对每个RoI都运行一次 CNN，而其中很大一部分是重叠的，�
 > 1. RoI 与特征图的匹配：ConvNet会保持空间特征，比如从 800×800 的原始图提取出 50×50 的特征图，这里的 Stride=800/50=16，只需要将RoI 的坐标值缩小相同的步长，即可找到与特征图相匹配
 > 2. RoI pooling：对于任意大小的 RoI，将其分成 K×K 的方格，对每个方格采用 Max pooling 下采样，将其变为固定尺寸
 
-### Faster R-CNN: Region Proposal Network
+#### Faster R-CNN: Region Proposal Network
 
 <div style="text-align: center;">
     <img src="Pasted image 20260608010605.png" width="800" />
@@ -405,7 +409,7 @@ Fast R-CNN 优化了 CNN 的运算次数，但是却遇到两个问题：
 3. RoI Pooling 从特征图上裁剪每个 proposal 的区域
 4. 对每个 RoI 进行分类和边界框精修
 
-Faster R-CNN 的关键就在于 **RPN 的工作机制**：
+Faster R-CNN 的关键在于 **RPN**：
 
 <div style="text-align: center;">
     <img src="Pasted image 20260608014611.png" width="800" />
@@ -425,54 +429,30 @@ Faster R-CNN 的关键就在于 **RPN 的工作机制**：
 > Anchor boxes 的设计思想是什么？
 > Anchor boxes 本质上是一种"先验"：预定义一组常见尺度和宽高比的框，让网络只需要预测"锚框到真实框的偏移量"，而不是从零预测绝对坐标。这大大降低了回归的难度。
 
-Faster R-CNN 是一个**两阶段（two-stage）检测器**：第一阶段 RPN 生成 proposals，第二阶段对这些 proposals 进行分类和精修。两阶段检测器通常精度较高但速度较慢。
-
 ### Single-Stage Object Detectors: YOLO / SSD / RetinaNet
-
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 29：Single-Stage 检测器：在网格上直接预测</div>
-</div>
-
-Redmon et al, "You Only Look Once: Unified, Real-Time Object Detection", CVPR 2016
-Liu et al, "SSD: Single-Shot MultiBox Detector", ECCV 2016
-Lin et al, "Focal Loss for Dense Object Detection", ICCV 2017
 
 与两阶段方法不同，**单阶段检测器** 跳过显式的 region proposal 步骤，直接在特征图上预测类别和边界框。
 
-**YOLO（You Only Look Once）** 的核心思想：
+### YOLO（You Only Look Once）
 
 <div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 30：YOLO：将图像划分为 $S\times S$ 网格</div>
+    <img src="Pasted image 20260608143757.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 20：YOLO：将图像划分为 S×S 网格</div>
 </div>
 
-将输入图像划分为 $S\times S$ 的网格（如 $7\times7$），每个网格单元负责预测该位置的目标。对每个网格单元，输出：
-- **B 个边界框**（$B$ 通常为 2）：每个框包含 $(x, y, w, h, \text{confidence})$ 共 5 个值
-- **C 个类别概率**：$P(\text{class})$
+**YOLO** 的核心思想：把分离的 RPN、分类器和边框回归器合并为一个统一的回归问题
 
-输出维度为 $S\times S\times (5B+C)$。
+YOLOv1 的核心步骤可以概括为：
+1. YOLO 的 backbone 与 Fast R-CNN 一致，都是先通过卷积层得到特征图
+2. 将特征图划分为 $S\times S$ 的网格，每个网格单元负责预测该位置的目标。对每个网格单元，输出 **B 个边界框** 和 **C 个类别概率**
+3. 通过 NMS 等机制筛选边界框
 
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 31：YOLO 每个网格输出 B 个 bbox 和 C 个类别概率</div>
-</div>
+需要注意的是，在步骤1和步骤2之间，并没有 RPN 这样的区域选择，也就是说 YOLO 是真正的 end-to-end 的神经网络，以 v1 为例，其架构可以看成是若干个卷积层（得到特征图）+若干个全连接层（从特征图得到边界框和概率）
 
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 32：YOLO 输出大量候选框，按 objectness 过滤</div>
-</div>
+> 如果把分类器和回归器合并了，那么怎么设计损失函数呢？
+> 损失可以分为3个部分，包括边界框的坐标，置信度和类别概率，为了避免背景损失淹没目标损失，背景框和目标框也要做区分，所以总损失由四部分加权构成，具体计算可以参考[[How yolo developed#损失函数设计：多任务的平衡艺术]]
 
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 33：YOLO 最终检测结果</div>
-</div>
-
-> 单阶段检测器 vs 两阶段检测器的 trade-off 是什么？
-> - **单阶段**（YOLO/SSD）：速度极快，适合实时应用，但精度略低，尤其对小物体不友好
-> - **两阶段**（Faster R-CNN）：精度更高，尤其对小物体更友好，但速度较慢
-> - RetinaNet 通过引入 **Focal Loss** 解决了单阶段检测器中类别不平衡（正负样本比例悬殊）的问题，大幅缩小了与两阶段方法的精度差距
-
+如果你和我一样对 YOLO 的发展过程感兴趣，可以参考我的笔记 [[How yolo developed]]
 ### DETR: Object Detection with Transformers
 
 <div style="text-align: center;">
