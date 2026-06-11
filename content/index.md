@@ -9,4 +9,4 @@ publish: true
 
 - [Lecture 07: RNN](Lecture07%20RNN)
 - [Lecture 08: Attention and Transformers](Lecture08%20Attention%20and%20Transformers)
-- [Lecture 09: Object Detection, Image Segmentation, Visualizing](Lecture09%20Object%20Detection%2C%20Image%20Segmentation%2C%20Visualizing)
+- [[lecture09  Object Detection, Image Segmentation, Visualizing|Lecture 09: Object Detection, Image Segmentation, Visualizing]]

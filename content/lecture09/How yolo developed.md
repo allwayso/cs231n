@@ -1,7 +1,7 @@
 ---
-title: "How YOLO developed"
+title: How YOLO developed
 publish: true
-target: ""
+target: 解释 YOLO 诞生的原因，以问题导向分析 YOLO 的主要迭代过程
 ---
 ## 前置问题：2-Stage 检测器为什么需要一个"更好的范式"？
 

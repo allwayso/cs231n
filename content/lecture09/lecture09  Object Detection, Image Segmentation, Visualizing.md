@@ -1,7 +1,7 @@
 ---
-title: "lecture09  Object Detection, Image Segmentation, Visualizing"
+title: "lecture09 : Object Detection, Image Segmentation, Visualizing"
 publish: true
-target: "CS231n Lecture 09 主线笔记：目标检测、图像分割与模型可视化，并补充 Pre-Norm、RMSNorm、SwiGLU、MoE 四种 Transformer 改进"
+target: CS231n Lecture 09 主线笔记：目标检测、图像分割与模型可视化，并补充 Pre-Norm、RMSNorm、SwiGLU、MoE 四种 Transformer 改进
 ---
 
 >[!SUMMARY] Table of Contents
@@ -11,22 +11,26 @@ target: "CS231n Lecture 09 主线笔记：目标检测、图像分割与模型�
 >        - [[lecture09  Object Detection, Image Segmentation, Visualizing#SwiGLU MLP|SwiGLU MLP]]
 >        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Mixture of Experts (MoE)|Mixture of Experts (MoE)]]
 >        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Tweaking Transformers 小结|Tweaking Transformers 小结]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Materials|Materials]]
 >    - [[lecture09  Object Detection, Image Segmentation, Visualizing#Computer Vision Tasks Overview|Computer Vision Tasks Overview]]
->    - [[lecture09  Object Detection, Image Segmentation, Visualizing#Semantic Segmentation|Semantic Segmentation]]
->        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Semantic Segmentation Ideas|Semantic Segmentation Ideas]]
+>    - [[lecture09  Object Detection, Image Segmentation, Visualizing#TASK1：Semantic Segmentation|TASK1：Semantic Segmentation]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Sliding Window|Sliding Window]]
 >        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Fully Convolutional Networks|Fully Convolutional Networks]]
 >        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Upsampling Methods|Upsampling Methods]]
 >        - [[lecture09  Object Detection, Image Segmentation, Visualizing#U-Net|U-Net]]
->    - [[lecture09  Object Detection, Image Segmentation, Visualizing#Object Detection|Object Detection]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Semantic Segmentation 小结|Semantic Segmentation 小结]]
+>    - [[lecture09  Object Detection, Image Segmentation, Visualizing#TASK2：Object Detection|TASK2：Object Detection]]
 >        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Single Object: Classification + Localization|Single Object: Classification + Localization]]
 >        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Multiple Objects: Sliding Window|Multiple Objects: Sliding Window]]
->        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Region Proposals: Selective Search|Region Proposals: Selective Search]]
->        - [[lecture09  Object Detection, Image Segmentation, Visualizing#R-CNN|R-CNN]]
->        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Fast R-CNN|Fast R-CNN]]
->        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Faster R-CNN: Region Proposal Network|Faster R-CNN: Region Proposal Network]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Region Proposals: Selective Search，R-CNN，Fast R-CNN，Faster R-CNN|Region Proposals: Selective Search，R-CNN，Fast R-CNN，Faster R-CNN]]
+>            - [[lecture09  Object Detection, Image Segmentation, Visualizing#Selective Search|Selective Search]]
+>            - [[lecture09  Object Detection, Image Segmentation, Visualizing#R-CNN|R-CNN]]
+>            - [[lecture09  Object Detection, Image Segmentation, Visualizing#Fast R-CNN|Fast R-CNN]]
+>            - [[lecture09  Object Detection, Image Segmentation, Visualizing#Faster R-CNN: Region Proposal Network|Faster R-CNN: Region Proposal Network]]
 >        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Single-Stage Object Detectors: YOLO / SSD / RetinaNet|Single-Stage Object Detectors: YOLO / SSD / RetinaNet]]
->        - [[lecture09  Object Detection, Image Segmentation, Visualizing#DETR: Object Detection with Transformers|DETR: Object Detection with Transformers]]
->    - [[lecture09  Object Detection, Image Segmentation, Visualizing#Instance Segmentation|Instance Segmentation]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#YOLO（You Only Look Once）|YOLO（You Only Look Once）]]
+>        - [[lecture09  Object Detection, Image Segmentation, Visualizing#DETR（Detection Transformer）|DETR（Detection Transformer）]]
+>    - [[lecture09  Object Detection, Image Segmentation, Visualizing#TASK3：Instance Segmentation|TASK3：Instance Segmentation]]
 >        - [[lecture09  Object Detection, Image Segmentation, Visualizing#Mask R-CNN|Mask R-CNN]]
 >    - [[lecture09  Object Detection, Image Segmentation, Visualizing#Visualization & Understanding|Visualization & Understanding]]
 >        - [[lecture09  Object Detection, Image Segmentation, Visualizing#First Layer Filters|First Layer Filters]]
@@ -453,89 +457,65 @@ YOLOv1 的核心步骤可以概括为：
 > 损失可以分为3个部分，包括边界框的坐标，置信度和类别概率，为了避免背景损失淹没目标损失，背景框和目标框也要做区分，所以总损失由四部分加权构成，具体计算可以参考[[How yolo developed#损失函数设计：多任务的平衡艺术]]
 
 如果你和我一样对 YOLO 的发展过程感兴趣，可以参考我的笔记 [[How yolo developed]]
-### DETR: Object Detection with Transformers
+### DETR（Detection Transformer）
 
 <div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 34：DETR：Transformer-based 目标检测</div>
+    <img src="Pasted image 20260608183641.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 21：DETR：Transformer-based 目标检测</div>
 </div>
 
-Carion et al, "End-to-End Object Detection with Transformers", ECCV 2020
 
 DETR（DEtection TRansformer）将目标检测重新定义为集合预测（set prediction）问题，完全抛弃了 Anchors、region proposals 和 NMS 等手工设计组件：
 
 1. CNN backbone 提取图像特征
 2. Transformer encoder-decoder 将特征图与一组可学习的 **object queries** 进行交互
 3. 每个 object query 直接输出一个预测结果（类别 + 边界框）或"无物体"标记
-4. 通过 **bipartite matching（匈牙利算法）** 将预测框与 ground-truth 框一一配对，进行端到端训练
+4. 通过 **Hungarian matching（匈牙利算法）** 将预测框与 ground-truth 框一一配对，进行端到端训练
 
-> DETR 的核心优势是什么？
-> 1. 端到端训练，无需 NMS 后处理
-> 2. 无需 Anchor 等手工先验
-> 3. 架构简洁，直接输出固定数量的预测集合
-> 缺点是训练收敛较慢（需要数百个 epoch），后续工作如 Deformable DETR 等改善了收敛速度和精度
+> object query 是什么？
+> object query 是一个超参数，只是一个数字，代表着对象查询量，当大于实际对象数时，查询结果标记为无物体
 
+DETR 的核心优势：
+
+1. 端到端训练，无需 NMS 后处理
+2. 无需 Anchor 等手工先验
+3. 架构简洁，直接输出固定数量的预测集合
+
+缺点是训练收敛较慢（需要数百个 epoch），后续工作如 Deformable DETR 等改善了收敛速度和精度
+
+>如果你也对匈牙利算法感兴趣，这个例子展示了算法步骤 [HungarianAlgorithm.com - Solve the Assignment Problem](https://www.hungarianalgorithm.com/hungarianalgorithm.php)，如果你对数学推导感兴趣，我写了一份不那么严谨，但是通俗易懂的笔记 [[Understanding Hungarian Algorithm without knowing maths ]]。
+>在 DETR 中，使用分类误差和框误差计算总误差，作为 边界框-GT 矩阵的值，通过匈牙利算法找到总误差最小的匹配。
 ---
 
 ## TASK3：Instance Segmentation
 
-### Mask R-CNN
-
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 35：四大 CV 任务对比：实例分割是最细粒度的</div>
-</div>
-
 **实例分割** 结合了目标检测和语义分割：既要检测出每个物体（如 Faster R-CNN），又要为每个实例输出像素级的 mask（如语义分割）。
 
-He et al, "Mask R-CNN", ICCV 2017
-
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 36：Mask R-CNN：在 Faster R-CNN 基础上增加 mask prediction 分支</div>
-</div>
+### Mask R-CNN
 
 **Mask R-CNN** 在 Faster R-CNN 的基础上增加了一个并行的 mask prediction 分支：
 
 <div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 37：Mask R-CNN 网络结构</div>
+    <img src="Pasted image 20260610230902.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 22：Mask R-CNN 流程</div>
 </div>
+
+> 这个图可能有一点误导性，容易让人以为掩膜层和分类、回归头是递进的关系，实际上掩膜头和分类头、回归头是并行的，损失函数由三个部分线性相加得到
 
 整体流程：
 1. CNN + RPN 生成 proposals
 2. **RoI Align**（改进版 RoI Pooling）提取每个 proposal 的精确特征区域
 3. 三个并行分支：分类（$C$ 个分数）、边界框回归（$4C$ 个坐标）、Mask 预测（$C\times28\times28$）
 
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 38：Mask R-CNN 中 RoI Align 及 mask 分支细节</div>
-</div>
-
-> RoI Align 相比 RoI Pooling 有什么改进？
+> 为什么使用 RoI Align 而不是 Fast R-CNN 中的 RoI Polling ? RoI Align 相比 RoI Pooling 有什么改进？
 > RoI Pooling 涉及两次量化操作（将浮点坐标取整），导致特征与原始图像位置不对齐（misalignment）。RoI Align 使用双线性插值，避免了量化误差，对于像素级精度的 mask 预测至关重要。
 
 <div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 39：Mask R-CNN mask 训练目标示例</div>
-</div>
-
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 40：Mask R-CNN 分割结果非常好</div>
+    <img src="Pasted image 20260610231333.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 23：Mask R-CNN mask 训练目标示例</div>
 </div>
 
 Mask R-CNN 还展示了极强的通用性：同样的架构稍加修改即可用于 **人体姿态估计（pose estimation）**，只需将 mask 分支替换为关键点回归分支。
-
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 41：Mask R-CNN 同时支持姿态估计</div>
-</div>
-
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 42：四大 CV 任务回顾总结</div>
-</div>
 
 ---
 
@@ -543,48 +523,43 @@ Mask R-CNN 还展示了极强的通用性：同样的架构稍加修改即可用
 
 神经网络常被批评为"黑盒"。理解模型内部到底在做什么、哪些输入区域对预测最重要，对于调试、验证和信任模型至关重要。
 
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 43：本节概览：Transformers Recap → CV Tasks → Visualization & Understanding</div>
-</div>
-
 ### First Layer Filters
 
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 44：线性分类器的可视化视角</div>
+<div style="display: flex; justify-content: center; gap: 20px; align-items: center;">
+    <!-- 第一张图 -->
+    <div style="text-align: center;">
+        <img src="Pasted image 20260611095427.png" width="400" />
+        <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 24：线性分类器的权重矩阵可视化</div>
+    </div>
+    <!-- 第二张图 -->
+    <div style="text-align: center;">
+        <img src="Pasted image 20260611095243.png" width="400" />
+        <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 25：可视化不同架构神经网络的第一个卷积层</div>
+    </div>
 </div>
 
-**可视化第一层卷积核** 是最直接的理解神经网络的方法。由于第一层输入是 RGB 图像，每个 $3\times\text{kernel size}\times\text{kernel size}$ 的卷积核可以直接可视化为图像。
+要理解模型内部在做什么，一个直观的方法就是可视化其中的权重矩阵，回顾线性分类器，由于通道数始终等于输入层，所以可视化相对简单，比如 car 就大概与车的正脸匹配。
 
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 45：不同架构第一层卷积核可视化（AlexNet / ResNet-18 / ResNet-101 / DenseNet-121）</div>
-</div>
-
-Krizhevsky, "One weird trick for parallelizing convolutional neural networks", arXiv 2014
-He et al, "Deep Residual Learning for Image Recognition", CVPR 2016
-Huang et al, "Densely Connected Convolutional Networks", CVPR 2017
+把线性分类器中的全连接层迁移到带卷积层的现代神经网络架构中，可以采用 **可视化第一层卷积核** 方法。由于第一层输入是 RGB 图像，每个 $3\times\text{kernel size}\times\text{kernel size}$ 的卷积核可以直接可视化为图像。
 
 不同 CNN 架构的第一层滤波器表现出惊人的一致性：都学到了**定向边缘检测器**（不同方向的边缘）、**颜色检测器**（互补色对）和**纹理模式**。这与哺乳动物视觉皮层 V1 区的简单细胞功能惊人地相似。
+
+> 为什么只可视化第一层卷积层？
+> 之所以往往可视化第一层卷积层，是因为输入通道一般为RGB，直接在RGB上做可视化即可。但是对于较深的卷积层，输入通道数一般大于3，这时候有以下几种方式进行可视化：
+> 1. 每个通道分别绘制一张灰度图像
+> 2. 用平均、最大值或 L2 Norm 把所有通道聚合到一个维度，可视化一张灰度图像
+> 3. 采用 PCA 主成分分析法得到三个主成分，把高维通道投影到三个主成分上，可视化 RGB 图像
 
 ### Saliency Maps
 
 <div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 46：Saliency via Backprop：哪些像素对预测最重要？</div>
+    <img src="Pasted image 20260611100901.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 26：计算每个像素对得分的梯度</div>
 </div>
-
-Simonyan, Vedaldi, and Zisserman, "Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps", ICLR Workshop 2014
 
 **Saliency Maps（显著性图）** 回答的问题是：对于给定预测类别，输入图像的哪些像素影响最大？
 
 核心思想：计算目标类别得分对输入图像的梯度，取绝对值，在 RGB 通道上取最大值：
-
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 47：计算类别得分对图像像素的梯度</div>
-</div>
 
 $$
 \text{Saliency}_{i,j} = \max_c \left|\frac{\partial S_{\text{class}}}{\partial x_{i,j,c}}\right|
@@ -592,22 +567,18 @@ $$
 
 其中 $S_{\text{class}}$ 是目标类别的得分（softmax 之前），$x_{i,j,c}$ 是位置 $(i,j)$ 处通道 $c$ 的像素值。
 
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 48：Saliency Maps 可视化示例</div>
-</div>
-
-> Saliency Maps 的直观理解？
-> 梯度越大的位置，表示像素值的微小变化对类别得分的影响越大——换句话说，模型在做决策时越"看重"这些像素。高亮区域就是模型做出当前判断的"关键证据"所在。
-
 ### Class Activation Mapping (CAM)
 
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 49：Class Activation Mapping (CAM) 结构</div>
+<div style="display: flex; justify-content: center; gap: 20px; align-items: center;">
+    <div style="text-align: center;">
+    <img src="Pasted image 20260611104220.png" width="400" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 27：Class Activation Mapping (CAM) 结构</div>
 </div>
-
-Zhou et al, "Learning Deep Features for Discriminative Localization", CVPR 2016
+    <div style="text-align: center;">
+    <img src="Pasted image 20260611104302.png" width="400" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 28：CAM 的热力图可视化</div>
+</div>
+</div>
 
 **CAM** 专门针对使用 Global Average Pooling (GAP) + 全连接层作为分类头的 CNN。其核心公式为：
 
@@ -617,10 +588,13 @@ $$
 
 其中 $f\in\mathbb{R}^{H\times W\times K}$ 是最后一层卷积特征图，$F_k$ 是第 $k$ 个通道的 GAP 值，$w_{k,c}$ 是全连接层中通道 $k$ 到类别 $c$ 的权重。
 
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 50：CAM 的热力图可视化</div>
-</div>
+以上是从类别 c 逐元素运算的角度理解，如果所有类别一起算，并用 **矩阵运算** 的角度理解的话，最后一层特征图 $X \in \mathbb{R}^{HW \times K}$，权重矩阵 $W \in \mathbb{R}^{K \times C}$，那么：
+
+$$  
+M = XW  
+$$
+
+维度是$(HW \times K)(K \times C) = HW \times C$，然后 reshape / transpose 成$M \in \mathbb{R}^{C \times H \times W}$，这就对应图里写的$M \in \mathbb{R}^{C,H,W}$
 
 **Class Activation Map** 为：
 
@@ -628,28 +602,29 @@ $$
 M_{c,h,w} = \sum_k w_{k,c} f_{h,w,k}
 $$
 
-热力图 $M_c$ 直接反映了每个空间位置对类别 $c$ 的贡献，可以通过上采样叠加回原始图像生成可视化结果。
-
-> CAM 有什么局限性？
-> CAM 要求分类头必须是 GAP + 单层全连接层。如果网络在 GAP 后还有额外的全连接层，或者使用其他池化方式，就无法直接应用 CAM。这也催生了更通用的 Grad-CAM。
+热力图 $M_c$ 直接反映了每个空间位置对类别 $c$ 的贡献，可以通过 **上采样** 叠加回原始图像生成可视化结果。
 
 ### Grad-CAM
 
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 51：Gradient-Weighted Class Activation Mapping (Grad-CAM)</div>
+<div style="display: flex; justify-content: center; gap: 20px; align-items: center;">
+    <!-- 第一张图 -->
+    <div style="text-align: center;">
+        <img src="Pasted image 20260611112650.png" width="400" />
+        <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 29：Grad-CAM 计算流程</div>
+    </div>
+    <!-- 第二张图 -->
+    <div style="text-align: center;">
+        <img src="Pasted image 20260611112754.png" width="400" />
+        <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 30：Grad-CAM 可视化结果</div>
+    </div>
 </div>
-
-Selvaraju et al, "Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization", CVPR 2017
 
 **Grad-CAM** 是 CAM 的泛化版本，不需要特定的网络结构，可以应用于**任意 CNN 的任意层**。
 
 算法步骤：
 
 1. 选取任意层，其激活图为 $A\in\mathbb{R}^{H\times W\times K}$
-
 2. 计算类别得分 $S_c$ 对激活图 $A$ 的梯度：$\frac{\partial S_c}{\partial A} \in\mathbb{R}^{H\times W\times K}$
-
 3. 对梯度做全局平均池化（GAP），得到每个通道的重要性权重 $\alpha_k$：
 
    $$
@@ -662,27 +637,22 @@ Selvaraju et al, "Grad-CAM: Visual Explanations from Deep Networks via Gradient-
    M_{h,w}^c = \text{ReLU}\left(\sum_k \alpha_k A_{h,w,k}\right)
    $$
 
-> $\alpha_k$ 的含义是什么？
-> $\alpha_k$ 表示激活图第 $k$ 个通道对类别 $c$ 的"重要性"。梯度越大，说明该通道的微小变化对最终预测的影响越大。$\alpha_k$ 可以看作 CAM 中 $w_{k,c}$ 的梯度近似，使得 Grad-CAM 适用于任意网络结构。
-
-<div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 52：Grad-CAM 可视化结果示例</div>
-</div>
+> $\alpha_k$ 的含义是什么？为什么 Grad-CAM 适用于所有卷积层？
+> $\alpha_k$ 表示激活图第 $k$ 个通道对类别 $c$ 的"重要性"。梯度越大，说明该通道的微小变化对最终预测的影响越大。
+> CAM 不能适用于所有卷积层就是因为它依赖于 $w_{k,c}$ ，而只有 GAP+FC 架构的最后一个卷积层满足这个条件；而 Grad-CAM 用梯度计算 $\alpha_k$，自然能够适用于所有网络结构。
 
 Grad-CAM 可以应用于不同深度的层：
 - **浅层**：热力图更细粒度，包含更多空间细节，但语义不明确
 - **深层**：热力图更粗粒度，语义更明确，突出最重要的判别区域
 
+> 深度与粒度的关系很好理解：层数越深，特征图的空间尺度越小，而热力图的尺寸与特征图一致，映射回输入尺寸的粒度自然更粗
 ### Visualizing ViT Features
 
 <div style="text-align: center;">
-    <img src="Pasted image 20260602115336.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 53：Visualizing ViT features</div>
+    <img src="Pasted image 20260611114617.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 31：Visualizing ViT features</div>
 </div>
 
-Chen et al, "When Vision Transformers Outperform ResNets Without Pre-training or Strong Data Augmentations", ICLR 2022
-Paul and Chen, "Vision Transformers are Robust Learners", AAAI 2022
 
 ViT 的特征可视化与 CNN 有本质不同。由于 ViT 使用自注意力机制，其感受野从一开始就是全局的（而非 CNN 的局部感受野逐层扩大）。ViT 不同层的 attention map 可视化可以揭示模型关注图像哪些区域来进行判断。
 
@@ -693,6 +663,7 @@ ViT 的特征可视化与 CNN 有本质不同。由于 ViT 使用自注意力机
 Lecture 09 涵盖了从 Transformer 改进到计算机视觉任务再到模型可视化的完整脉络：
 
 **Transformer 改进（Recap）**：
+
 - Pre-Norm → 训练更稳定
 - RMSNorm → 计算更快
 - SwiGLU MLP → 门控机制提升性能
@@ -707,6 +678,7 @@ Lecture 09 涵盖了从 Transformer 改进到计算机视觉任务再到模型�
 | **Instance Segmentation** | 边界框 + 逐实例 mask | Mask R-CNN（在 Faster R-CNN 上加 mask 分支） |
 
 **模型可视化**：
+
 - **First Layer Filters**：可视化卷积核，发现边缘/颜色/纹理检测器
 - **Saliency Maps**：通过梯度反向传播找到关键像素
 - **CAM**：通过 GAP 权重加权特征图，但仅适用于特定网络结构
