@@ -278,6 +278,7 @@ $$
     <img src="Pasted image 20260615174837.png" width="800" />
     <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 14：Video Swin Transformer — 局部时空立方体内的 self-attention</div>
 </div>
+
 #### MViT: Multiscale Vision Transformers
 
 MViT 借鉴了 CNN 中"逐层减小空间分辨率、增加通道数"的经典设计。关键做法：**在计算 attention 之前，先压缩 K 和 V 的空间尺寸**（通过卷积聚合邻近 token）。
