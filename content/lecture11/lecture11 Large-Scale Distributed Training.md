@@ -46,14 +46,16 @@ target: CS231n Lecture 11 主线笔记：GPU 硬件架构、大规模分布式�
 
 ### Inside an H100 GPU
 
-GPU（Graphics Processing Unit）最初为计算机图形学设计，因其天然的大规模并行特性而被重新定位为**通用并行处理器**。NVIDIA H100 是当前深度学习训练的主力。
+GPU（Graphics Processing Unit）最初为计算机图形学中的像素渲染和矩阵变换而设计。由于这类任务天然具有高度并行性，GPU 逐渐从专用图形处理器演化为通用并行计算处理器，并成为现代深度学习训练的核心硬件之一。以 NVIDIA H100 为例，它是当前大规模模型训练中最常见的高端 GPU 之一。
 
 <div style="text-align: center;">
     <img src="Pasted image 20260617120113.png" width="800" />
     <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 1：NVIDIA H100 GPU 内部 — 中央为计算核心，周围环绕 80GB HBM 高带宽内存，带宽约 3 TB/s</div>
 </div>
 
-深入 H100 的计算核心，可以看到**三级存储层次**：
+从结构上看，H100 的性能并不只来自计算核心本身，也高度依赖其存储层次。GPU 需要持续向计算单元供应数据，因此显存和缓存带宽直接影响实际吞吐量。H100 内部可以抽象为三级存储结构：
+
+<div align="center">
 
 | 层级 | 大小 | 特点 |
 |------|------|------|
@@ -61,45 +63,52 @@ GPU（Graphics Processing Unit）最初为计算机图形学设计，因其天�
 | **L2 Cache** | 50 MB | 更接近计算核心，访问更快 |
 | **L1 Cache + 寄存器** | 256 KB / SM | 最近、最快 |
 
+</div>
+
 <div style="text-align: center;">
     <img src="Pasted image 20260617120213.png" width="800" />
     <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 2：H100 Streaming Multiprocessor (SM) — 共 132 个活跃 SM（芯片上有 144 个，由于良率问题仅启用 132 个），每个 SM 包含 FP32 核心和 Tensor 核心</div>
 </div>
 
-每个 SM 内部有两类关键计算单元：
+在计算层面，H100 由多个 Streaming Multiprocessor（SM）组成。每个 SM 可以看作一个独立的小型并行计算单元，内部包含普通 FP32 Cores 和专门用于矩阵计算的 Tensor Cores。
 
-**FP32 Cores（128 个/SM）**：
-- 每个时钟周期计算 $a \cdot x + b$（标量操作）
-- 每个 SM 每周期 $128 \times 2 = 256$ FLOP
+FP32 Cores 主要执行普通标量浮点运算。每个 SM 中包含 128 个 FP32 Cores，每个核心每个时钟周期可以执行一次 fused multiply-add 操作，即 $a \cdot x + b$。由于一次乘加通常计为 2 FLOPs，因此每个 SM 每周期的 FP32 理论吞吐量为$128 \times 2 = 256 \ \mathrm{FLOPs}$
 
-**Tensor Cores（4 个/SM）**：
-- 每个时钟周期做一次**小矩阵乘法**：$A_{[16 \times 4]} \times B_{[4 \times 8]} + C_{[16 \times 8]}$
-- 单次操作 $16 \times 4 \times 8 \times 2 = 1024$ FLOP
-- 每个 SM 每周期 $4 \times 1024 = 4096$ FLOP
-- Tensor Cores 是 GPU **吞吐量的真正来源**（16× vs FP32 cores）
+相比之下，Tensor Cores 专门面向矩阵乘法设计，是深度学习训练吞吐量的主要来源。每个 SM 中包含 4 个 Tensor Cores，每个 Tensor Core 每周期可执行一次小矩阵乘法累加操作：$A_{16 \times 4} \times B_{4 \times 8} + C_{16 \times 8}$
 
-Tensor Cores 采用**混合精度**工作：输入为 16-bit（低精度乘法），累加过程使用 32-bit（高精度加法）。这意味着如果在 PyTorch 中忘记将模型 cast 为 16-bit，模型会回退到 FP32 cores 运行，速度可能比预期慢 **20 倍**。
+其对应计算量为：$16 \times 4 \times 8 \times 2 = 1024 \ \mathrm{FLOPs}$
+
+因此，每个 SM 每周期由 Tensor Cores 提供的吞吐量为：$4 \times 1024 = 4096 \ \mathrm{FLOPs}$
+
+这意味着在适合 Tensor Core 的计算模式下，其吞吐量约为普通 FP32 Cores 的 16 倍。因此，现代深度学习训练的高性能主要来自 Tensor Cores，而不是传统意义上的 FP32 标量核心。
+
+Tensor Cores 通常采用混合精度计算：输入矩阵使用 16-bit 低精度格式，例如 FP16 或 BF16，以提高吞吐量和降低显存占用；累加过程则使用 32-bit 精度，以保持数值稳定性。因此，在 PyTorch 等框架中，如果模型或输入没有正确转换为 16-bit 或 BF16，就可能无法充分使用 Tensor Cores，而是回退到 FP32 Cores 上运行，导致实际速度显著低于预期。
 
 ### GPU Performance Evolution: 1000× in 12 Years
 
-从 2013 年的 K40 到 2025 年的 B200，GPU 算力经历了惊人增长：
+GPU 性能的快速提升是大模型发展的重要硬件基础。从 2013 年的 K40 到 2025 年的 B200，单设备理论算力在约 12 年内提升了约 1000 倍。
 
 <div style="text-align: center;">
     <img src="Pasted image 20260617120626.png" width="800" />
     <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 3：GPU 算力增长 — 从 K40 (5 FP32 TFLOP/s) 到 B200 (5000 TC TFLOP/s)，12 年间约 1000× 提升</div>
 </div>
 
-关键转折点出现在 **V100（2016-2017）**——首次引入 Tensor Cores。此后每一代都在增大 Tensor Core 的芯片面积占比。近 12 年单设备算力提升约 1000 倍，这是 AI 能力飞跃的根本驱动力之一。
+其中最关键的转折点是 V100 引入 Tensor Cores。此后，NVIDIA 每一代 GPU 都持续增强矩阵计算能力，并逐步提高 Tensor Core 在芯片中的重要性。可以说，过去十余年 GPU 算力的跨越式增长，尤其是 Tensor Core 吞吐量的提升，是大规模深度学习模型得以训练和扩展的重要原因之一。
 
 ---
 
 ## GPU Clusters: Many GPUs as One Computer
 
-### Meta's Llama3 Cluster
-
 存储层次不仅在单个 GPU 内部存在，在**集群层面**同样延续——离计算核心越远，通信带宽越低：
 
+<div style="text-align: center;">
+    <img src="Pasted image 20260617120917.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 4：集群存储层次 — GPU 内部 ~3 TB/s → Server 内 GPU 间 ~900 GB/s (3× 降低) → Pod 内 ~50 GB/s (再降 18×)</div>
+</div>
+
 Meta 为训练 Llama3 构建的 GPU 集群提供了非常详细的公开数据：
+
+<div align="center">
 
 | 层级               | 配置       | GPU 数      | GPU 间带宽      |
 | ---------------- | -------- | ---------- | ------------ |
@@ -109,48 +118,36 @@ Meta 为训练 Llama3 构建的 GPU 集群提供了非常详细的公开数据�
 | **GPU Pod**      | 192 Rack | 3,072      | ~50 GB/s     |
 | **Full Cluster** | 8 Pod    | **24,576** | <50 GB/s     |
 
-<div style="text-align: center;">
-    <img src="Pasted image 20260617120917.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 4：集群存储层次 — GPU 内部 ~3 TB/s → Server 内 GPU 间 ~900 GB/s (3× 降低) → Pod 内 ~50 GB/s (再降 18×)</div>
 </div>
 
-将这个集群视为**一台巨大的计算机**：
+如果把这个集群视为一台巨大的计算机，它的规模是惊人的：整个集群包含 24,576 个 GPU、约 1.875 PB GPU 内存、约 4.15 亿个 FP32 Core、约 1300 万个 Tensor Core，并可提供约 $24.3 \times 10^{18}$ FLOP/s 的总算力。
 
-- 24,576 个 GPU
-- 1.875 PB GPU 内存
-- 4.15 亿 FP32 Core
-- 1300 万 Tensor Core
-- **24.3 EFLOP/s** 总算力（$24.3 \times 10^{18}$）
+因此，大规模模型训练中的核心思维需要发生转变：我们不再只关注单个 GPU 或单台服务器的性能，而是要把整个数据中心看作一台超级计算机。问题也随之从“如何让一张 GPU 跑得更快”，转变为“如何让数万张 GPU 在连续数周甚至数月的训练过程中高效协同工作”。
 
-核心思维转变：**不再考虑单个设备，而是将整个数据中心视为一台超级计算机**。问题变成：如何在这台超级计算机上连续数月训练一个巨型神经网络？
+这种训练任务通常会持续数月，训练周期受模型规模、数据规模、集群稳定性以及人的项目规划周期共同限制。更大的前沿模型训练甚至可能接近一年量级。同时需要注意的是，Meta 的 Llama3 训练集群虽然已经非常庞大，但并不是当前可能存在的最大 GPU 集群；业界已经出现或规划了 50,000 到 100,000 GPU 规模的训练集群。
 
-最长的训练通常持续**数月**（人的规划周期限制），GPT-4.5/5 等可能接近一年。但这些集群不是最大的——世界上已知存在 50,000–100,000 GPU 的集群。
+在这样的背景下，训练硬件本身也成为大模型竞争的重要部分。除了 NVIDIA GPU 外，其他专用 AI 加速器也在快速发展。例如，Google TPU（Tensor Processing Unit）已经迭代多代，v5p TPU 具有较高的 BF16 计算能力和较大的片上内存，并可组成大规模 TPU Pod；Google 的 Gemini 系列模型很可能主要基于 TPU 训练。与此同时，AMD MI355X、AWS Trainium 等硬件也在尝试进入大模型训练市场。这说明大模型训练已经不只是算法问题，而是算法、硬件、网络和系统工程共同作用的结果。
 
-### Other Training Hardware
+然而，无论使用 NVIDIA GPU、Google TPU，还是其他 AI 加速器，一个共同问题始终存在：单个设备的显存、算力和通信能力都无法直接支撑超大模型训练。因此，必须将模型、数据和计算过程拆分到大量设备上执行。这就自然引出了多维并行，也就是 ND Parallelism。
 
-除 NVIDIA 外，其他竞争者也在涌现：
+## Four Dimension of Pallelel
 
-- **Google TPU**（Tensor Processing Unit）：已迭代六代，v5p TPU 约 3151 BF16 TFLOP/s，216GB 内存，可组成 8960 芯片的 Pod。Gemini 模型几乎确定在 TPU 上训练。只能通过 Google Cloud 使用。
-- **AMD MI355X**：2500 BF16 TFLOP/s，288GB 内存
-- **AWS Trainium3**：2500 FP8 TFLOP/s，144GB 内存，Anthropic 用于部分训练
+Transformer 模型中的激活值可以抽象为一个 4D tensor：
 
----
+$ (\mathrm{Layer}, \mathrm{Batch}, \mathrm{Sequence}, \mathrm{Dim}) $
 
-## Five Degrees of Parallelism
+这四个维度分别对应模型的层数、batch 样本、序列长度和隐藏维度。由于这些维度本身都具有可拆分性，它们也自然定义了多种并行方向：
 
-Transformer 模型的激活值是 4D tensor：$(\text{Layer}, \text{Batch}, \text{Sequence}, \text{Dim})$。这定义了**四种可并行的轴**：
+- Data Parallelism :批次维度的并行，即每个 GPU 分管若干个 minibatch
+- Context Parallelism : 序列维度的并行，即每个 GPU 分管样本中一定长度的序列
+- Pipeline Parallelism ：层维度的并行，即每个 GPU 分管模型中的若干个层级，并通过 Microbatch 实现并行
+- Tensor Parallelism (Dim 维度)：通道维度的并行，即每个 GPU 分管权重矩阵的某一块
 
 <div style="text-align: center;">
     <img src="Pasted image 20260617121256.png" width="800" />
     <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 5：四种并行策略 </div>
 </div>
 
-此外还有 **Expert Parallelism**（用于 MoE 模型）。
-
-- Data Parallelism :批次维度的并行，即每个 GPU 分管若干个 minibatch
-- Context Parallelism : 序列维度的并行，即每个 GPU 分管样本中一定长度的序列
-- Pipeline Parallelism ：层维度的并行，即每个 GPU 分管模型中的若干个层级，并通过 Microbatch 实现并行
-- Tensor Parallelism (Dim 维度)：通道维度的并行，即每个 GPU 分管权重矩阵的某一块
 
 ---
 
@@ -298,12 +295,16 @@ HSDP 将 GPU 组织为 **2D 网格**，同时使用两种并行：
 
 **计算-内存权衡表（以 $N = 4$ 为例）**:
 
+<div align="center">
+
 | **策略**                       | **Compute ** | **Peak Memory ** | **计算复杂度**              | **内存复杂度**            |
 | ---------------------------- | ------------ | ---------------- | ---------------------- | -------------------- |
 | **Forward+backward**         | **8**        | **4**            | $O(N)$                 | $O(N)$               |
 | **Full Recomputation**       | **14**       | **1**            | $O(N^2)$               | $O(1)$               |
 | **C checkpoints** (C=2)      | **10**       | **4**            | $O(N + \frac{N^2}{C})$ | $O(C + \frac{N}{C})$ |
 | ** $\sqrt{N}$ checkpoints ** | **10**       | **4**            | $O(N\sqrt{N})$         | $O(\sqrt{N})$        |
+
+</div>
 
 这四种策略代表了深度学习中典型的 **“时间换空间”** 思想：
 - **Forward+backward** 速度最快，但内存消耗随层数线性暴增，极易导致显存溢出（OOM）；
@@ -389,10 +390,14 @@ $\mathrm{MFU} = \mathrm{HFU} \times \frac{\text{理论 FLOPs}}{\text{实际 FLOP
 
 两种 Attention 并行方案：
 
+<div align="center">
+
 | 方案 | 思路 | 特点 |
 |------|------|------|
 | **Ulysses** | 按 attention head 维度并行，All-to-All 重分片 | 实现简单，但 head 数需能被 GPU 数整除 |
 | **Ring Attention** | 将注意力矩阵分块，GPU 环形传递 K/V 块 | 可扩展到极长序列，实现复杂 |
+
+</div>
 
 **Ulysses 的核心操作**：先按 sequence 分片做 QKV 投影，再重新按 head 分片做 attention——本质是对数据做一次"转置"。这需要 **All-to-All**：每个 GPU 把自己的数据切成 N 块，第 i 块发给 GPU i，同时从所有人那里各收一块。
 
@@ -474,12 +479,16 @@ Tensor Parallelism 将**单个权重矩阵**切分到多个 GPU，通过块矩�
     <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 19：ND Parallelism — Llama3-405B 最大训练配置：TP×8, CP×16, PP×16, DP×8 同时运行在 16,384 GPU 上</div>
 </div>
 
+<div align="center">
+
 | 并行维度                 | 倍数  | 说明          |
 | -------------------- | --- | ----------- |
 | Tensor Parallelism   | 8×  | 拆分单个权重矩阵    |
 | Context Parallelism  | 16× | 处理 131K 长序列 |
 | Pipeline Parallelism | 16× | 拆分 126 层    |
 | Data Parallelism     | 8×  | 拆分 batch    |
+
+</div>
 
 总并行度：$8 \times 16 \times 16 \times 8 = 16,384$ GPU（实际约 16,000）
 
@@ -489,13 +498,19 @@ Tensor Parallelism 将**单个权重矩阵**切分到多个 GPU，通过块矩�
 
 首先，不同策略的**通信强度与模式**如下：
 
+<div align="center">
+
 | 策略 | 通信密集度 | 通信内容 | 带宽需求 |
 |------|-----------|---------|---------|
 | TP / FSDP | 极高 | 权重分片、梯度归约（每层都通信） | 最高 |
 | PP | 中等 | 激活值和梯度（仅层边界通信） | 中等 |
 | DP | 较低 | 梯度归约（仅 backward 结束通信） | 可容忍较低 |
 
+</div>
+
 恰好，集群拓扑也有天然的**速度层次**：
+
+<div align="center">
 
 |层级|带宽（典型）|通信范围|互连技术|
 |---|---|---|---|
@@ -503,6 +518,8 @@ Tensor Parallelism 将**单个权重矩阵**切分到多个 GPU，通过块矩�
 |单机内|~900 GB/s|同一服务器内 GPU|NVLink / NVSwitch|
 |Pod 内|~50 GB/s|同一机架/Pod|InfiniBand|
 |跨 Pod|<50 GB/s|跨机架/数据中心|以太网 / IB|
+
+</div>
 
 **设计的核心原则**：把通信最密集的策略放在物理距离最近的地方。这也是 HSDP 区分组内/组间通信的深层原因——本质上是**让算法适配硬件拓扑**，而非反过来。
 
@@ -532,6 +549,8 @@ Lecture 11 覆盖了大规模分布式训练的完整技术栈：
 
 **四种并行策略**：
 
+<div align="center">
+
 | 策略 | 拆分维度 | 核心方法 | 通信模式 |
 |------|----------|----------|----------|
 | **Data Parallelism (DP)** | Batch | All-Reduce 梯度 | 梯度的 1× 通信 |
@@ -539,6 +558,8 @@ Lecture 11 覆盖了大规模分布式训练的完整技术栈：
 | **Context Parallelism (CP)** | Sequence | Ulysses / Ring Attention | 注意力计算通信 |
 | **Pipeline Parallelism (PP)** | Layers | Microbatches 减少 bubble | 激活值/梯度传递 |
 | **Tensor Parallelism (TP)** | Dim (Channel) | 块矩阵乘法 | 双层技巧减少通信 |
+
+</div>
 
 **关键工具**：
 - **Activation Checkpointing**：$O(N\sqrt{N})$ compute + $O(\sqrt{N})$ memory（$C=\sqrt{N}$ 时）
