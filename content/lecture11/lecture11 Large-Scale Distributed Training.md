@@ -10,7 +10,6 @@ target: CS231n Lecture 11 主线笔记：GPU 硬件架构、大规模分布式�
 >        - [[lecture11 Large-Scale Distributed Training#Inside an H100 GPU|Inside an H100 GPU]]
 >        - [[lecture11 Large-Scale Distributed Training#GPU Performance Evolution: 1000× in 12 Years|GPU Performance Evolution: 1000× in 12 Years]]
 >    - [[lecture11 Large-Scale Distributed Training#GPU Clusters: Many GPUs as One Computer|GPU Clusters: Many GPUs as One Computer]]
->        - [[lecture11 Large-Scale Distributed Training#Memory Hierarchy Across the Cluster|Memory Hierarchy Across the Cluster]]
 >        - [[lecture11 Large-Scale Distributed Training#Meta's Llama3 Cluster|Meta's Llama3 Cluster]]
 >        - [[lecture11 Large-Scale Distributed Training#Other Training Hardware|Other Training Hardware]]
 >    - [[lecture11 Large-Scale Distributed Training#Five Degrees of Parallelism|Five Degrees of Parallelism]]
@@ -22,12 +21,12 @@ target: CS231n Lecture 11 主线笔记：GPU 硬件架构、大规模分布式�
 >        - [[lecture11 Large-Scale Distributed Training#Scaling Recipe (DP → FSDP → HSDP)|Scaling Recipe (DP → FSDP → HSDP)]]
 >    - [[lecture11 Large-Scale Distributed Training#Model FLOPs Utilization (MFU)|Model FLOPs Utilization (MFU)]]
 >        - [[lecture11 Large-Scale Distributed Training#Hardware FLOPs Utilization (HFU)|Hardware FLOPs Utilization (HFU)]]
->        - [[lecture11 Large-Scale Distributed Training#From HFU to MFU|From HFU to MFU]]
+>        - [[lecture11 Large-Scale Distributed Training#MFU（Model FLOPs Utilization）|MFU（Model FLOPs Utilization）]]
 >    - [[lecture11 Large-Scale Distributed Training#Context Parallelism (CP)|Context Parallelism (CP)]]
 >    - [[lecture11 Large-Scale Distributed Training#Pipeline Parallelism (PP)|Pipeline Parallelism (PP)]]
 >    - [[lecture11 Large-Scale Distributed Training#Tensor Parallelism (TP)|Tensor Parallelism (TP)]]
 >    - [[lecture11 Large-Scale Distributed Training#ND Parallelism: Putting It All Together|ND Parallelism: Putting It All Together]]
->        - [[lecture11 Large-Scale Distributed Training#为什么必须分层混合|为什么必须分层混合]]
+>        - [[lecture11 Large-Scale Distributed Training#Parallelism & Network topology|Parallelism & Network topology]]
 >    - [[lecture11 Large-Scale Distributed Training#Summary|Summary]]
 >    - [[lecture11 Large-Scale Distributed Training#Materials|Materials]]
 
@@ -96,10 +95,9 @@ Tensor Cores 采用**混合精度**工作：输入为 16-bit（低精度乘法�
 
 ## GPU Clusters: Many GPUs as One Computer
 
-### Memory Hierarchy Across the Cluster
+### Meta's Llama3 Cluster
 
 存储层次不仅在单个 GPU 内部存在，在**集群层面**同样延续——离计算核心越远，通信带宽越低：
-### Meta's Llama3 Cluster
 
 Meta 为训练 Llama3 构建的 GPU 集群提供了非常详细的公开数据：
 
@@ -176,7 +174,7 @@ $$
 
 <div style="text-align: center;">
     <img src="Pasted image 20260617231039.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 7：数据并行 — M 个 GPU 各维护模型副本，加载不同 minibatch，独立 forward/backward，然后 All-Reduce 梯度</div>
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 6：数据并行 — M 个 GPU 各维护模型副本，加载不同 minibatch，独立 forward/backward，然后 All-Reduce 梯度</div>
 </div>
 
 **数据并行六步**：
@@ -191,7 +189,7 @@ $$
 
 <div style="text-align: center;">
     <img src="Pasted image 20260617121439.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 8：All-Reduce — 每个 GPU 持有不同 tensor，操作后每个 GPU 都得到所有 tensor 的归约结果（如求和）。这是数据并行最早需要、也是唯一需要的通信原语</div>
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 7：All-Reduce — 每个 GPU 持有不同 tensor，操作后每个 GPU 都得到所有 tensor 的归约结果（如求和）。这是数据并行最早需要、也是唯一需要的通信原语</div>
 </div>
 
 步骤 5 中每个 GPU 需要把自己算出的局部梯度求和后发回所有人——这个"**归约（reduce）+ 广播（broadcast）**"的复合操作就是 **All-Reduce**。它随着最早的数据并行需求而诞生，在纯 DP 时代是唯一的通信原语。
@@ -204,7 +202,7 @@ FSDP 的解决方案：**把模型权重也拆分到不同 GPU 上**，而不仅
 
 <div style="text-align: center;">
     <img src="Pasted image 20260617234650.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 9：FSDP 工作流程 — 权重由不同 GPU 拥有，forward 时广播、用后删除，backward 时重新广播、聚合梯度</div>
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 8：FSDP 工作流程 — 权重由不同 GPU 拥有，forward 时广播、用后删除，backward 时重新广播、聚合梯度</div>
 </div>
 
 **FSDP 核心机制**：
@@ -213,6 +211,8 @@ FSDP 的解决方案：**把模型权重也拆分到不同 GPU 上**，而不仅
 - **Forward pass**：owner 广播 $W_i$ → 所有 GPU 计算 → 非 owner 删除 $W_i$（节省内存）→ 同时**预取** $W_{i+1}$
 - **Backward pass**：owner 广播 $W_i$ → 所有 GPU 计算局部梯度 → 各 GPU 将局部梯度发送回 owner → owner 聚合并更新权重
 - 稳态时，三个操作并行进行：**计算 layer L 的 backward + 发送/更新 layer L+1 的梯度 + 预取 layer L-1 的权重**
+
+> 一个小优化：前向传播时最后一层的权重不必删除，因为马上就要通过 All-Gather 获取
 
 FSDP 的 forward 和 backward 各需要一种新的通信模式：
 
@@ -224,7 +224,7 @@ FSDP 的 forward 和 backward 各需要一种新的通信模式：
     <img src="Pasted image 20260617121527.png" width="400" />
 	</div>
 </div>
-<div style="font-size: 1em; color: #888; margin-top: 5px;text-align: center;">图 10：All-Gather 和 Reduce-Scatter</div>
+<div style="font-size: 1em; color: #888; margin-top: 5px;text-align: center;">图 9：All-Gather 和 Reduce-Scatter</div>
 
 
 **Forward → All-Gather**：权重被分片在各 GPU 上，但 forward 时每个 GPU 都需要完整权重。于是每个 GPU 持有权重的不同分片，通过 All-Gather 将碎片"收集齐"发给所有人。
@@ -252,7 +252,7 @@ HSDP 将 GPU 组织为 **2D 网格**，同时使用两种并行：
 
 <div style="text-align: center;">
     <img src="Pasted image 20260617235313.png" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 11：HSDP — 二维 GPU 网格，组内 FSDP（高带宽） + 组间 DP（低带宽），匹配集群拓扑</div>
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 10：HSDP — 二维 GPU 网格，组内 FSDP（高带宽） + 组间 DP（低带宽），匹配集群拓扑</div>
 </div>
 
 **拓扑感知设计**：将 FSDP 组放在同一台服务器或同一 Pod 内（利用高带宽），组间 DP 通信可以跨 Pod（容忍较低带宽）。这是**多维并行**的首个例子。
@@ -325,25 +325,43 @@ HSDP 将 GPU 组织为 **2D 网格**，同时使用两种并行：
 
 ## Model FLOPs Utilization (MFU)
 
-当并行策略有大量 knobs 需要调节时（batch size、FSDP size、HSDP 维度、checkpoint 粒度……），优化的**唯一指导指标**就是 MFU。
+当并行策略有大量 knobs 需要调节时（batch size、FSDP size、HSDP 维度、checkpoint 粒度……），我们需要一个指标来指导策略调优，而优化的**唯一指导指标**就是 MFU。
 
 ### Hardware FLOPs Utilization (HFU)
 
-H100 理论峰值：989.4 BF16 TFLOP/s。实际能获得多少？
+H100 理论峰值为 989.4 BF16 TFLOP/s，但是实际值肯定达不到理论值，我们关心的是真正进行计算时，H100 的吞吐量是多少。为了计算实际吞吐量，我们规定一个指标 **HFU = 实际实现的吞吐 / 理论最大吞吐**。
+
+通过一段简单的 Pytorch 矩阵乘法代码即可估算 HFU：
+-  $size=2^k ,k={9,10,11,12,13,14,15}$
+- 两个 $N*N$ 矩阵乘法的浮点运算次数 $flop= 2*N^3$
+- 对于每个 size，循环计算 12 次矩阵乘法，取平均用时作为 sec
+- 可以得到不同 size 对应的 $\mathrm{TFLOPS} = \frac{\mathrm{FLOP}}{\mathrm{sec}} \times 10^{-12}$ ($\mathrm{TFLOPS} = 10^{12} \,\mathrm{FLOPS}$)
+- $\mathrm{HFU} = \frac{\mathrm{TFLOPS}}{984.4} \times 100\%$
 
 <div style="text-align: center;">
-    <img src="" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 13：HFU Benchmark — 大矩阵乘法在 H100 上可达到约 80% HFU</div>
+    <img src="Pasted image 20260618142133.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 12：HFU Benchmark — 大矩阵乘法在 H100 上可达到约 80% HFU</div>
 </div>
 
-**HFU = 实际实现的吞吐 / 理论最大吞吐**。大矩阵乘法（~8000×8000）在 H100 上约 80% HFU。但 HFU 不计算激活检查点、数据增强、优化器、通信等开销。
+观察图中的 HFU-Matrix Size 表格，可以发现大矩阵乘法（~8000×8000）在 H100 上约 80% HFU。
 
-### From HFU to MFU
+**局限：** HFU 只计算了硬件吞吐情况，HFU 高只能说明 GPU 吃下了大量的运算，而不能说明模型是否高效，即通过更少的实际运算量达到既定效果。因此我们引入了 MFU。
 
-**MFU = Forward/Backward 理论耗时 / Forward/Backward 实际耗时**
+### MFU（Model FLOPs Utilization）
+
+为了度量模型是否高效，我们引入了  $\mathrm{MFU} = \frac{\text{模型理论 FLOPs}}{\text{实际运行时间} \times \text{硬件峰值 FLOPS}}$。
+
+不同于 HFU，MFU 从模型层面刻画利用率，不仅受到硬件吞吐能力（即 HFU）的影响，还反映了算法与系统带来的额外开销，例如激活值检查点（activation checkpointing）、重计算（recomputation）、数据预处理以及 padding 等因素。这些机制会使实际执行的 FLOPs 大于模型理论 FLOPs，从而降低 MFU。因此通常有  $\mathrm{MFU} \le \mathrm{HFU}$，且可进一步分解为  
+$\mathrm{MFU} = \mathrm{HFU} \times \frac{\text{理论 FLOPs}}{\text{实际 FLOPs}}$，  其中后一项刻画了算法效率。
+
+<div style="text-align: center;">
+    <img src="Pasted image 20260618151455.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 13：MFU benchmark</div>
+</div>
 
 计算步骤：
-1. 计算模型 Fwd+Bwd 的理论 FLOPs 总数（可近似 Bwd = 2× Fwd）
+
+1. 计算模型 Fwd+Bwd 的理论 FLOP 总数（可近似 Bwd = 2× Fwd,不考虑在 FP32 上计算的归一化和残差连接）
 2. 查设备理论峰值 FLOP/s
 3. $t_{theoretical} = \text{FLOPs}_{model} / \text{FLOP/sec}_{peak}$
 4. 实测完整训练迭代耗时（含数据加载、forward、backward、优化器更新）
@@ -361,7 +379,7 @@ H100 理论峰值：989.4 BF16 TFLOP/s。实际能获得多少？
 当序列长度变得很长（如 131K tokens）时，单个 GPU 内存不足以处理。**Context Parallelism** 将序列切分到多个 GPU：
 
 <div style="text-align: center;">
-    <img src="" width="800" />
+    <img src="Pasted image 20260618153534.png" width="800" />
     <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 14：Context Parallelism — N-way CP 下每个 GPU 处理序列的 1/N 部分</div>
 </div>
 
@@ -396,17 +414,24 @@ Llama3 预训练实例：
 Pipeline Parallelism 将网络的**层**分配到不同 GPU——每个 GPU 负责若干连续层的计算。
 
 <div style="text-align: center;">
-    <img src="" width="800" />
+    <img src="Pasted image 20260618153624.png" width="800" />
     <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 16：Pipeline Parallelism 的 Bubble 问题和 Microbatch 解决方案</div>
 </div>
 
 **问题：Sequential Dependency → Bubble**。Naïve 实现下，GPU 大部分时间在等待上一阶段的输出——N-way PP 的最大理论 MFU 仅为 $1/N$（如 8-way PP → 12.5%）。
 
-**解决方案：Microbatches**。将大 batch 拆分为多个 microbatches，交错送入 pipeline：
+**解决方案：Microbatches**。将大 batch 拆分为多个 microbatches，交错送入 pipeline，使得并行度更高：
 
-- 4-way PP + 4 microbatches：MFU 从 $1/4 = 25\%$ 提升到 $16/28 \approx 57\%$
-- 更多 microbatches → 更高 MFU，但更耗显存（需要保存更多激活值）
-- 需要在 microbatch 数量、激活检查点粒度和并行度之间权衡——**最大化 MFU**
+<div style="text-align: center;">
+    <img src="Pasted image 20260618153926.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 17：通过 Microbatches 以提高并行度，减少 GPU idle 时间</div>
+</div>
+
+当采用 4-way PP + 4 microbatches时，Max MFU 从 $1/4 = 25\%$ 提升到 $16/28 \approx 57\%$
+ 
+ 但是microbatch 并不是越多越好。随着 microbatch 数量的增加，虽然 pipeline bubble 会减小，从而降低空闲时间，但与此同时，GPU 之间的通信频率显著增加，小规模计算带来的 kernel launch 开销和算力利用率下降也会逐渐占据主导。
+ 
+ 因此，系统整体性能呈现出典型的 trade-off：**bubble 开销减少 vs. 调度与通信开销增加**。在实际系统设计中，需要在 microbatch 数量、激活检查点粒度以及并行策略之间进行权衡，以 **最大化 MFU** 为核心优化目标。
 
 ---
 
@@ -415,8 +440,8 @@ Pipeline Parallelism 将网络的**层**分配到不同 GPU——每个 GPU 负�
 Tensor Parallelism 将**单个权重矩阵**切分到多个 GPU，通过块矩阵乘法并行计算。
 
 <div style="text-align: center;">
-    <img src="" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 17：Tensor Parallelism — 两层连续 TP 的技巧（第一层列分片 + 第二层行分片），避免层间通信</div>
+    <img src="Pasted image 20260618160025.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 18：Tensor Parallelism — 两层连续 TP 的技巧（第一层列分片 + 第二层行分片），避免层间通信</div>
 </div>
 
 **基本操作**：$XW = Y$ 被切分为 $X[W_1 W_2 W_3 W_4] = [Y_1 Y_2 Y_3 Y_4]$，每个 GPU 计算一块。
@@ -428,33 +453,41 @@ Tensor Parallelism 将**单个权重矩阵**切分到多个 GPU，通过块矩�
 
 这与 Transformer FFN 中的两层 MLP 完美匹配——因此 TP 特别适合 Transformer 的 MLP 块。
 
+> **TP 与 FSDP 的本质区别**：FSDP 以**整层**为单位分片——每个权重矩阵按层归属不同的 owner GPU；TP 以**单个矩阵内部**为单位分片——同一个权重矩阵被切成多块分布到不同 GPU。因此 TP 的通信粒度更细，但也更频繁。
+
+**TP 的通信特点与局限**：
+- 得益于双层技巧，TP 每两层才需要一次 All-Reduce，比 naive 实现节省一半通信
+- 但 TP 的通信**每层都在发生**（All-Gather 输入 / Reduce-Scatter 输出），不像 DP 只在 backward 结束时通信一次
+- 实践中 TP 一般做到 **8 路**就到头了——更多的分片意味着更碎的矩阵乘法（Tensor Core 利用率下降）和更高的通信/计算比
+- TP 最适合 Transformer 的 **MLP 块**（两层线性天然配对），QKV 投影也可用，但 attention softmax 部分不适合（不是矩阵乘法）
+
 ---
 
 ## ND Parallelism: Putting It All Together
 
-在实际训练最大规模的模型时，**所有并行策略同时使用**：
+在单一并行策略下（如仅使用 TP 或 DP），系统很快会受到模型规模、序列长度或通信开销的限制，难以进一步扩展。因此，在大规模训练中通常采用 **ND Parallelism（N-dimensional parallelism）**，即在多个维度上同时引入并行策略（如 Tensor、Pipeline、Data、Context 等），形成一个多维并行空间。不同维度分别作用于模型的不同结构（参数、层、序列或数据），从而在计算与通信之间取得更好的平衡，并突破单一并行方式的扩展瓶颈。
+
+在实际训练最大规模模型时，这些并行策略并不是独立存在，而是**组合使用并协同映射到硬件拓扑**上，以实现高效扩展。以 Llama3-405B 为例，其训练配置体现了典型的 ND 并行设计：
 
 <div style="text-align: center;">
-    <img src="" width="800" />
-    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 18：ND Parallelism — Llama3-405B 最大训练配置：TP×8, CP×16, PP×16, DP×8 同时运行在 16,384 GPU 上</div>
+    <img src="Pasted image 20260618160608.png" width="800" />
+    <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 19：ND Parallelism — Llama3-405B 最大训练配置：TP×8, CP×16, PP×16, DP×8 同时运行在 16,384 GPU 上</div>
 </div>
 
-**Llama3-405B 最大训练配置**（16,000 GPU）：
-
-| 并行维度 | 倍数 | 说明 |
-|----------|------|------|
-| Tensor Parallelism | 8× | 拆分单个权重矩阵 |
-| Context Parallelism | 16× | 处理 131K 长序列 |
-| Pipeline Parallelism | 16× | 拆分 126 层 |
-| Data Parallelism | 8× | 拆分 batch |
+| 并行维度                 | 倍数  | 说明          |
+| -------------------- | --- | ----------- |
+| Tensor Parallelism   | 8×  | 拆分单个权重矩阵    |
+| Context Parallelism  | 16× | 处理 131K 长序列 |
+| Pipeline Parallelism | 16× | 拆分 126 层    |
+| Data Parallelism     | 8×  | 拆分 batch    |
 
 总并行度：$8 \times 16 \times 16 \times 8 = 16,384$ GPU（实际约 16,000）
 
+### Parallelism & Network topology
+
 不同的并行策略有不同的通信需求——将它们巧妙排列到集群的拓扑结构上（高速通道放 FSDP/TP，低速通道放 DP），才能最大化 MFU。
 
-### 为什么必须分层混合
-
-不同策略的**通信量**差异巨大：
+首先，不同策略的**通信强度与模式**如下：
 
 | 策略 | 通信密集度 | 通信内容 | 带宽需求 |
 |------|-----------|---------|---------|
@@ -464,20 +497,23 @@ Tensor Parallelism 将**单个权重矩阵**切分到多个 GPU，通过块矩�
 
 恰好，集群拓扑也有天然的**速度层次**：
 
-```
-GPU 内部     >   Server 内     >   Pod 内      >   跨 Pod
-(3 TB/s)        (900 GB/s)       (50 GB/s)       (<50 GB/s)
-  ↑                ↑               ↑               ↑
- NVLink           NVSwitch        InfiniBand      以太网
-```
+|层级|带宽（典型）|通信范围|互连技术|
+|---|---|---|---|
+|GPU 内部|~3 TB/s|同 GPU|HBM / 寄存器|
+|单机内|~900 GB/s|同一服务器内 GPU|NVLink / NVSwitch|
+|Pod 内|~50 GB/s|同一机架/Pod|InfiniBand|
+|跨 Pod|<50 GB/s|跨机架/数据中心|以太网 / IB|
 
 **设计的核心原则**：把通信最密集的策略放在物理距离最近的地方。这也是 HSDP 区分组内/组间通信的深层原因——本质上是**让算法适配硬件拓扑**，而非反过来。
 
 Llama3-405B 的典型映射：
-- **TP（8 路）**放在单机 8 GPU 内 → NVLink 最快，权重切碎也能吃得消
-- **PP（16 路）**放在同 Pod 内 → 传激活/梯度，中等带宽即可
-- **DP（8 路）**跨 Pod → 只传梯度，容忍较低带宽
-- **CP（16 路）**与 DP 类似，跨 Pod 部署
+
+- **TP（8 路）** 放在单机 8 GPU 内 → NVLink 最快，权重切碎也能吃得消
+- **PP（16 路）** 放在同 Pod 内 → 传激活/梯度，中等带宽即可
+- **DP（8 路）** 跨 Pod → 只传梯度，容忍较低带宽
+- **CP（16 路）** 与 DP 类似，跨 Pod 部署
+
+回顾四种通信原语的出现顺序，恰好映射了分布式训练的演化历史：**All-Reduce**（DP 时代，最早）→ **All-Gather + Reduce-Scatter**（FSDP 时代，模型大到单卡装不下时）→ **All-to-All**（CP 时代，长序列需要数据重分片时）。每一种新并行策略的出现，都催生了对新通信模式的需求——通信原语不是先设计好再分发给各策略，而是反过来被实际需求推动着逐步诞生的。
 
 ---
 
