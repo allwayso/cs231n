@@ -1,0 +1,3570 @@
+WEBVTT
+
+1
+00:00:05.600 --> 00:00:14.380
+Last time, on Tuesday this week, we had a lecture on GPUs and how to train, how to use them,
+本周二，也就是上次课，我们进行了一场关于GPU的讲座，内容涉及如何训练、如何使用它们，
+
+2
+00:00:14.380 --> 00:00:20.920
+and how to use multiple GPUs for training, larger scaling, your trainings, and so on.
+以及如何使用多个GPU进行训练，以更大规模地扩展您的训练过程等等。
+
+3
+00:00:20.920 --> 00:00:29.360
+An exciting, a new topic that we've added to this class this year, which is, I think, timely and very important
+这是我们今年新增到本课程中的一个令人兴奋的新主题，我认为它既及时又非常重要，
+
+4
+00:00:29.360 --> 00:00:34.960
+with the increase of model sizes and applications
+这与当今您所见到的人工智能模型在规模和应用上的增长息息相关。
+
+5
+00:00:34.960 --> 00:00:39.840
+that you see the AI models have these days.
+在此之前，我们讨论并涵盖了计算机视觉中的所有关键任务，从分类，
+
+6
+00:00:39.840 --> 00:00:50.660
+And before that, we talked about we covered all of the key tasks in computer vision, from classification,
+到语义分割、目标检测、实例分割等等。
+
+7
+00:00:50.660 --> 00:00:56.880
+semantic segmentation, object detection, instance segmentation, and so on.
+我们将会重新审视其中一些主题，以及我们今天所讨论模型的部分结果。
+
+8
+00:00:56.880 --> 00:01:02.790
+And we're going to revisit some of these topics, some of the results of the models we talk about today.
+因此，这些任务仍然相当重要。
+
+9
+00:01:02.790 --> 00:01:09.410
+So those tasks are still quite important.
+接着，我们探讨了模型的可视化与理解，观察模型正在学习什么。
+
+10
+00:01:09.410 --> 00:01:19.490
+And then we talked about visualizing and understanding the models and seeing what the models are learning.
+我们讨论过的内容之一，例如，在早期课程中，
+
+11
+00:01:19.490 --> 00:01:27.830
+One of the things that we've discussed was, for example, using just in the early sessions,
+我们谈到了最近邻算法以及在像素空间中的应用，以及我们如何能够实际找到图像的类别。
+
+12
+00:01:27.830 --> 00:01:37.690
+we talked about nearest neighbor and in the pixel space and how we can actually do find the class of images
+[Translation failed]
+
+13
+00:01:37.690 --> 00:01:40.550
+based on only pixels-based distances,
+仅基于像素距离，
+
+14
+00:01:40.550 --> 00:01:45.330
+and we discussed how it's actually not efficient.
+我们讨论了它实际上效率并不高。
+
+15
+00:01:45.330 --> 00:01:53.130
+And one of the things that we talked about was if we use the embedding layers or the feature
+我们讨论过的一点是，如果我们使用嵌入层或特征
+
+16
+00:01:53.130 --> 00:01:56.730
+space, feature layers, one of those fully connected layers
+空间、特征层，即那些全连接层之一
+
+17
+00:01:56.730 --> 00:02:05.780
+in the feature maps there, from a convolutional neural network or any other network architecture that we
+在其中的特征图中，无论是来自卷积神经网络还是我们使用的任何其他网络架构，
+
+18
+00:02:05.780 --> 00:02:10.020
+use there, that could actually be a good representation
+实际上都可能成为图像的良好表征。
+
+19
+00:02:10.020 --> 00:02:11.280
+of images.
+（对图像的）良好表征。
+
+20
+00:02:11.280 --> 00:02:19.260
+And we talked about the L2 distance, if we use that as the metric for nearest neighbor
+并且我们讨论了L2距离，如果我们在这些模型的特征空间中使用它作为最近邻的度量标准，对吧？
+
+21
+00:02:19.260 --> 00:02:23.540
+in the feature space, feature of these models, right?
+在特征空间中，这些模型的特征，对吧？
+
+22
+00:02:23.540 --> 00:02:30.260
+So this means that these features are quite meaningful for the specific task that we had at hand.
+因此，这意味着这些特征对于我们手头的特定任务而言是相当有意义的。
+
+23
+00:02:30.260 --> 00:02:39.660
+And this means that specifically, OK, if we run a neural network, a CNN, a ResNet, or even
+具体来说，这意味着，如果我们运行一个神经网络，一个CNN，一个ResNet，甚至
+
+24
+00:02:39.660 --> 00:02:46.800
+the transformer models, and look at the representations,
+是Transformer模型，并观察其表征，
+
+25
+00:02:46.800 --> 00:02:54.740
+the learned representations, in different contexts, you may see these as referred to with different names.
+即在不同上下文中学习到的表征，您可能会看到它们被冠以不同的名称。
+
+26
+00:02:54.740 --> 00:02:59.810
+Learned large representations, features, embeddings, latent space, and so on.
+学习到的大型表征、特征、嵌入、潜在空间等等。
+
+27
+00:02:59.810 --> 00:03:07.590
+But these learned representations or features are very good representatives of the images.
+但这些学习到的表征或特征，是图像非常好的代表。
+
+28
+00:03:07.590 --> 00:03:17.470
+And if we have a way to extract those, we can always get the class labels out of those features
+如果我们有办法提取这些特征，我们总是可以通过一个简单的线性模型从中获得类别标签
+
+29
+00:03:17.470 --> 00:03:21.350
+as well by a simple linear model, as you can see at the end
+正如您最后在这里看到的
+
+30
+00:03:21.350 --> 00:03:22.430
+here.
+。
+
+31
+00:03:22.430 --> 00:03:33.530
+But the major challenge that exists is training or building these networks at larger scale is always challenging.
+但存在的主要挑战是，大规模训练或构建这些网络始终具有挑战性。
+
+32
+00:03:33.530 --> 00:03:37.350
+And can you tell me why there is a challenge here?
+那么，您能告诉我这里为何存在挑战吗？
+
+33
+00:03:37.350 --> 00:03:45.110
+So the thing is that at larger scale, we need a lot of labeled data because this network is trained
+问题在于，在更大规模上，我们需要大量标注数据，因为该网络是从图像开始训练的，
+
+34
+00:03:45.110 --> 00:03:49.270
+starting from an image, and at the end, we have class labels.
+而最终，我们得到的是类别标签。
+
+35
+00:03:49.270 --> 00:03:56.190
+If we train this network, yes, these features are going to be very useful for getting those class labels out,
+如果我们训练这个网络，是的，这些特征对于获取那些类别标签将非常有用，
+
+36
+00:03:56.190 --> 00:03:57.370
+right?
+对吧？
+
+37
+00:03:57.370 --> 00:04:05.148
+But at scale, we need a lot of manual labeling efforts to sit down and label the images one by one.
+但在大规模情况下，我们需要投入大量的人工标注工作，逐一为图像添加标签。
+
+38
+00:04:05.148 --> 00:04:10.850
+If the task is segmentation, you have to label the pixels one by one in every image,
+如果任务是分割，你就必须逐像素地标注每张图像中的每个像素，
+
+39
+00:04:10.850 --> 00:04:14.650
+and that is going to be very challenging.
+而这将极具挑战性。
+
+40
+00:04:14.650 --> 00:04:22.490
+So the question is is there a way we can train neural networks without the need for huge
+所以问题是，有没有一种方法可以训练神经网络，而无需依赖海量
+
+41
+00:04:22.490 --> 00:04:25.190
+manually labeled data sets?
+的人工标注数据集？
+
+42
+00:04:25.190 --> 00:04:32.970
+So these manual labels are the challenge, and we want to see if we can bypass them
+因此，这些人工标签是挑战所在，我们想看看能否绕过它们。
+
+43
+00:04:32.970 --> 00:04:36.290
+in a way to train a neural network that
+以一种训练神经网络的方式，
+
+44
+00:04:36.290 --> 00:04:39.410
+gets us very good features.
+从而获得非常优质的特征。
+
+45
+00:04:39.410 --> 00:04:45.270
+And with that, the topic of self-supervised learning comes in light.
+由此，自监督学习这一主题便应运而生。
+
+46
+00:04:45.270 --> 00:04:48.570
+And that's what we are going to cover today.
+而这正是我们今天要探讨的内容。
+
+47
+00:04:48.570 --> 00:04:58.700
+So having a large data set of, say, images without any labels,
+因此，假设我们拥有一个大型数据集，例如大量无标签的图像，
+
+48
+00:04:58.700 --> 00:05:08.460
+our hypothesis is that we can train a neural network using an objective function, a pretext task that gets us good
+我们的假设是，我们可以通过一个目标函数，即一个前置任务，来训练神经网络，从而获得优质的特征。
+
+49
+00:05:08.460 --> 00:05:12.600
+features from images.
+从图像中提取特征。
+
+50
+00:05:12.600 --> 00:05:23.860
+And then when it comes to learning on a specific data set with a smaller set of data points, which have labels,
+然后，当需要在具有标签的较小数据集上进行学习时，
+
+51
+00:05:23.860 --> 00:05:32.260
+we can basically train, we can transfer this trained encoder and use that to extract features for a downstream task
+我们基本上可以训练，我们可以迁移这个已训练好的编码器，并用其为下游任务提取特征
+
+52
+00:05:32.260 --> 00:05:34.500
+or downstream objective.
+或实现下游目标。
+
+53
+00:05:34.500 --> 00:05:43.540
+So here, we want to define a pretext task, a task that is general enough to be able to learn
+因此，在这里，我们希望定义一个前置任务，一个足够通用的任务，以便能够学习
+
+54
+00:05:43.540 --> 00:05:47.500
+some good features from the images
+从图像中提取一些好的特征
+
+55
+00:05:47.500 --> 00:05:56.870
+and then use that encoder, let's call it encoder, to solve another problem, what we call
+然后使用那个编码器，我们称之为编码器，去解决另一个问题，即我们所说的
+
+56
+00:05:56.870 --> 00:05:59.990
+downstream task, downstream objective, which
+下游任务、下游目标，也就是
+
+57
+00:05:59.990 --> 00:06:02.330
+is the application that you care about.
+你所关心的应用。
+
+58
+00:06:02.330 --> 00:06:08.130
+Like for example, we have a lot of natural images downloaded from the internet.
+例如，我们从互联网上下载了大量的自然图像。
+
+59
+00:06:08.130 --> 00:06:10.330
+We can train something out of it.
+我们可以从中训练出一些东西。
+
+60
+00:06:10.330 --> 00:06:14.910
+And then we have a small data set of, for example, one of these industrial applications
+然后我们有一个小型数据集，例如，针对某个工业应用
+
+61
+00:06:14.910 --> 00:06:18.870
+or medical applications that we have few labeled images on.
+或医疗应用，其中我们只有少量已标注的图像。
+
+62
+00:06:18.870 --> 00:06:26.270
+And we can now use that transferred knowledge to extract features and then classify or perform the task
+现在我们可以利用迁移过来的知识来提取特征，然后进行分类或执行我们感兴趣的任务。
+
+63
+00:06:26.270 --> 00:06:29.350
+that we are interested in.
+我们感兴趣的任务。
+
+64
+00:06:29.350 --> 00:06:35.430
+So we want to delve into this topic and go a little bit deeper in understanding
+因此，我们想深入探讨这个主题，并更深入地理解
+
+65
+00:06:35.430 --> 00:06:37.590
+the different components.
+其中的不同组成部分。
+
+66
+00:06:37.590 --> 00:06:45.590
+In a nutshell, what self-supervised learning is, as I said, defining this pretext task on the data
+简而言之，自监督学习就是，如我所说，在无标签的数据集上定义这个前置任务。
+
+67
+00:06:45.590 --> 00:06:47.110
+set with no labels.
+在无标签的数据集上。
+
+68
+00:06:47.110 --> 00:06:55.140
+Encoder often gets us some learned representations.
+编码器通常会为我们提供一些习得的表征。
+
+69
+00:06:55.140 --> 00:07:04.080
+And then another module of the same neural network generates or does transfer the learned representations
+然后，同一神经网络的另一个模块会生成习得的表征，或将其转换
+
+70
+00:07:04.080 --> 00:07:06.240
+into the output space, which could
+到输出空间，该空间可能
+
+71
+00:07:06.240 --> 00:07:11.980
+be labels or outputs that automatically are generated from the data.
+是从数据中自动生成的标签或输出。
+
+72
+00:07:11.980 --> 00:07:14.880
+They are not manual annotations.
+它们不是人工标注。
+
+73
+00:07:14.880 --> 00:07:25.400
+So if we can do this, then we have an objective function, a loss function, and a neural network
+因此，如果我们能做到这一点，那么我们就有了一个目标函数、一个损失函数和一个神经网络
+
+74
+00:07:25.400 --> 00:07:29.280
+to be trained with loss function.
+来通过损失函数进行训练。
+
+75
+00:07:29.280 --> 00:07:36.600
+As you can see here, we call the second part sometimes decoder, a classifier, a regressor, depending on how
+正如您在此处所见，我们有时将第二部分称为解码器、分类器或回归器，具体取决于
+
+76
+00:07:36.600 --> 00:07:38.420
+we define our pretext task.
+我们如何定义我们的前置任务。
+
+77
+00:07:38.420 --> 00:07:44.120
+I will give you some examples, but these could be any form of framework.
+我将给出一些示例，但这些可以是任何形式的框架。
+
+78
+00:07:44.120 --> 00:07:49.810
+But when it's encoder and then a decoder, this is more of an autoencoding framework
+但当它是编码器然后接一个解码器时，这更像是一种自编码框架
+
+79
+00:07:49.810 --> 00:07:52.570
+that I'll talk briefly about.
+我将简要地讨论一下。
+
+80
+00:07:52.570 --> 00:08:03.890
+So after we do this training with the pretext task, now we can use the encoder and the learn representations
+因此，在我们使用前置任务完成此训练后，现在我们可以将编码器和学习到的表征
+
+81
+00:08:03.890 --> 00:08:12.830
+for a downstream task, which we just need to add one layer or even a fully connected neural network,
+用于下游任务，我们只需添加一层，甚至是一个全连接神经网络，
+
+82
+00:08:12.830 --> 00:08:18.410
+a linear function, or a fully connected neural network that predicts the labels, and these labels are coming now
+一个线性函数，或一个预测标签的全连接神经网络，而这些标签现在正被提供
+
+83
+00:08:18.410 --> 00:08:20.570
+from the data set.
+来自数据集。
+
+84
+00:08:20.570 --> 00:08:31.230
+So that's the major, that's the main concept of self-supervised learning, that the pretext version of it,
+所以，这就是自监督学习的主要概念，即其借口任务版本，
+
+85
+00:08:31.230 --> 00:08:37.289
+a portion of it doesn't require any labeled data to do the training.
+其中一部分不需要任何标注数据来进行训练。
+
+86
+00:08:37.289 --> 00:08:43.169
+But how to define the pretext task itself is not that straightforward.
+但如何定义借口任务本身并非那么简单直接。
+
+87
+00:08:43.169 --> 00:08:46.560
+There are many different ways of defining those.
+定义这些任务有许多不同的方法。
+
+88
+00:08:46.560 --> 00:08:56.500
+For example, just keep in mind that we want to define the pretext task in a way
+例如，请记住，我们希望以一种方式定义借口任务
+
+89
+00:08:56.500 --> 00:09:02.020
+that it's, first, general enough that can get us good features
+首先，它要足够通用，能为我们提供良好的特征
+
+90
+00:09:02.020 --> 00:09:04.120
+and doesn't require manual labeling.
+并且不需要人工标注。
+
+91
+00:09:04.120 --> 00:09:07.492
+So the labels should come from the data itself, right?
+所以标签应该来自数据本身，对吧？
+
+92
+00:09:07.492 --> 00:09:16.360
+So one example would be image completion, where we half of the image or parts of the image.
+一个例子是图像补全，我们遮住图像的一半或部分区域。
+
+93
+00:09:16.360 --> 00:09:23.960
+And we define a task to given the parts that are unmasked, predict the parts that are masked.
+我们定义一个任务：给定未被遮住的部分，预测被遮住的部分。
+
+94
+00:09:23.960 --> 00:09:32.660
+Or for example, we rotate the image with a specific angle, and the task is to take the image as input
+或者，例如，我们将图像旋转一个特定角度，任务是将该图像作为输入
+
+95
+00:09:32.660 --> 00:09:37.340
+and predict what's the rotation angle that it's gone through.
+并预测它经历了怎样的旋转角度。
+
+96
+00:09:37.340 --> 00:09:44.850
+And the other one could be a jigsaw puzzle, where we have patches of the image that are not ordered,
+另一个可能是拼图任务，即我们有一些未按顺序排列的图像块，
+
+97
+00:09:44.850 --> 00:09:50.590
+but the task is to output the correct order of these patches.
+但任务是输出这些图像块的正确顺序。
+
+98
+00:09:50.590 --> 00:09:55.070
+And colorization is one of the popular ones that these are the four that we'll
+而图像着色是其中一种流行的方法，这四种是我们今天
+
+99
+00:09:55.070 --> 00:09:58.350
+be covering very quickly today.
+会快速介绍的内容。
+
+100
+00:09:58.350 --> 00:10:08.350
+But given the black and white version of the image, predict the colors for each of the pixels.
+但给定图像的黑白版本，预测每个像素的颜色。
+
+101
+00:10:08.350 --> 00:10:13.810
+So solving the pretext task allows the model to learn good features.
+因此，解决这个前置任务能让模型学习到良好的特征。
+
+102
+00:10:13.810 --> 00:10:15.730
+That's what we wanted.
+这正是我们想要的。
+
+103
+00:10:15.730 --> 00:10:20.210
+And we can automatically generate labels for the pretext tasks.
+而且我们可以为这些前置任务自动生成标签。
+
+104
+00:10:20.210 --> 00:10:27.350
+So the two points that I mentioned we need for a task that could be qualified as a good pretext
+因此，我提到的两点，是我们需要一个任务能够被认定为是自监督学习良好前置任务所必需的。
+
+105
+00:10:27.350 --> 00:10:30.270
+task for self-supervised learning.
+用于自监督学习。
+
+106
+00:10:30.270 --> 00:10:38.510
+Some other quick considerations to always keep in mind, how to evaluate a self-supervised learning
+另外一些需要时刻牢记的快速考量是，如何评估一个自监督学习
+
+107
+00:10:38.510 --> 00:10:39.510
+framework.
+框架。
+
+108
+00:10:39.510 --> 00:10:47.240
+There are many different pieces and areas that you can actually look into the pretext task itself
+实际上，有许多不同的部分和领域可供您深入研究，包括前置任务本身，
+
+109
+00:10:47.240 --> 00:10:50.160
+because we are generating the labels and so on.
+因为我们在生成标签等等。
+
+110
+00:10:50.160 --> 00:10:59.080
+It gives us the power to do some evaluation of how good the model is able to solve that pretext task.
+这赋予我们能力，去评估模型解决该前置任务的能力有多强。
+
+111
+00:10:59.080 --> 00:11:03.700
+So that's one of the factors.
+所以这是其中一个因素。
+
+112
+00:11:03.700 --> 00:11:08.840
+Then representation quality itself is sometimes very important.
+那么，表示质量本身有时也非常重要。
+
+113
+00:11:08.840 --> 00:11:17.760
+Looking at, for example, only representations without any fine tuning or anything that I'll be talking about or even
+例如，仅查看表示本身，不进行任何微调或我将要讨论的其他操作，甚至
+
+114
+00:11:17.760 --> 00:11:20.680
+clustering the representations to see,
+对表示进行聚类以观察，
+
+115
+00:11:20.680 --> 00:11:23.160
+do we see a pattern in the representations?
+我们是否能在表示中看到某种模式？
+
+116
+00:11:23.160 --> 00:11:28.060
+And sometimes, there are some good dimensionality reduction algorithms.
+有时，会用到一些优秀的降维算法。
+
+117
+00:11:28.060 --> 00:11:35.240
+I'm referring to t-SNE here, which we didn't very much talk about, but this is a dimensionality reduction
+我这里指的是 t-SNE，我们之前没有过多讨论，但这是一种降维
+
+118
+00:11:35.240 --> 00:11:41.940
+framework that you can reduce the dimensionality of the learned representations and then visualize it in 2D
+一种框架，您可以降低所学表征的维度，然后在二维空间中将其可视化
+
+119
+00:11:41.940 --> 00:11:48.140
+or 3D and see if there is a pattern that you can find in your representations.
+或三维空间中，并查看您的表征中是否存在某种模式。
+
+120
+00:11:48.140 --> 00:11:54.540
+So robustness, generalization, and computational efficiency, these are all quite important.
+因此，鲁棒性、泛化能力和计算效率，这些都相当重要。
+
+121
+00:11:54.540 --> 00:12:04.780
+But the most important thing, the most important aspect that we are after is the performance
+但最重要的方面，我们追求的最重要的方面是
+
+122
+00:12:04.780 --> 00:12:06.880
+on the downstream task.
+在下游任务上的性能。
+
+123
+00:12:06.880 --> 00:12:14.020
+Because we are doing the entire self-supervised learning and define the tasks, pretext tasks,
+因为我们正在进行整个自监督学习并定义任务，即前置任务，
+
+124
+00:12:14.020 --> 00:12:17.180
+and so on to be able to improve results
+等等，以便能够改善
+
+125
+00:12:17.180 --> 00:12:21.100
+for a task of interest or something that we care about.
+我们关心的任务或感兴趣事项的结果。
+
+126
+00:12:21.100 --> 00:12:25.700
+Let's see some quick examples of how this could be done.
+我们来看一些如何实现此目标的快速示例。
+
+127
+00:12:25.700 --> 00:12:36.280
+This is an example of let's rotate the images and then predict the degree of rotation as the output.
+这是一个示例，我们旋转图像，然后预测旋转角度作为输出。
+
+128
+00:12:36.280 --> 00:12:43.110
+So we can train this in a self-supervised manner without the need for labels of the objects in the image.
+因此，我们可以以自监督的方式训练此模型，而无需图像中物体的标签。
+
+129
+00:12:43.110 --> 00:12:48.510
+And we have a bunch of convolutional layers in this example and then a fully connected neural network
+在此示例中，我们有一系列卷积层，然后是一个全连接神经网络
+
+130
+00:12:48.510 --> 00:12:53.590
+at the end to do this either regression or classification task.
+最终用于执行此回归或分类任务。
+
+131
+00:12:53.590 --> 00:13:02.270
+And this means that this is giving us a set of good features, a good feature extractor, which
+这意味着这为我们提供了一组好的特征，一个优秀的特征提取器，它
+
+132
+00:13:02.270 --> 00:13:07.990
+we can at the end remove these tasks, pretext
+我们最终可以移除这些任务，即前置任务
+
+133
+00:13:07.990 --> 00:13:17.990
+task, specific parts, the FC layers, and put one layer, or in some cases, multiple layers
+任务，特定部分，即全连接层，并放置一层，或在某些情况下，放置多层
+
+134
+00:13:17.990 --> 00:13:21.490
+to classify the features into the object label.
+将特征分类为对象标签。
+
+135
+00:13:21.490 --> 00:13:30.370
+So this time, we use the object labels to do the prediction and train this linear function itself.
+所以这次，我们使用对象标签进行预测，并训练这个线性函数本身。
+
+136
+00:13:30.370 --> 00:13:35.960
+So we often look for a shallow network because if the features are good enough, then
+因此，我们通常寻找一个浅层网络，因为如果特征足够好，那么
+
+137
+00:13:35.960 --> 00:13:42.760
+we don't need to do a lot of training
+我们就不需要进行大量的训练
+
+138
+00:13:42.760 --> 00:13:47.000
+on getting the class labels out.
+关于获取类别标签。
+
+139
+00:13:47.000 --> 00:13:52.360
+So this is self-supervised learning in general.
+所以，这大体上就是自监督学习。
+
+140
+00:13:52.360 --> 00:13:57.480
+And although we are talking about the computer vision applications.
+尽管我们讨论的是计算机视觉应用。
+
+141
+00:13:57.480 --> 00:14:07.080
+But this paradigm of self-supervised learning was actually what enabled all of these large language models.
+但自监督学习的这种范式，实际上正是所有那些大型语言模型得以实现的原因。
+
+142
+00:14:07.080 --> 00:14:18.440
+GPT-4 and all of these frameworks are trained with mostly raw data without any manual labeling.
+GPT-4 以及所有这些框架，主要都是使用原始数据训练的，无需任何人工标注。
+
+143
+00:14:18.440 --> 00:14:25.840
+And not just in language models, in speech, and these days, quite a lot in robot
+而且不仅仅是在语言模型中，在语音领域，以及如今，在机器人
+
+144
+00:14:25.840 --> 00:14:29.640
+and robotics and reinforcement learning.
+和机器人学以及强化学习中也相当多。
+
+145
+00:14:29.640 --> 00:14:41.410
+Because when we don't need any me labeling data, we can start capturing data, raw data without any manual
+因为当我们不需要任何人工标注数据时，我们就可以开始捕获数据，即没有任何人工
+
+146
+00:14:41.410 --> 00:14:43.310
+labeling and use those for training.
+标注的原始数据，并用它们进行训练。
+
+147
+00:14:43.310 --> 00:14:51.550
+And that's why you see so many self-driving cars in the Bay Area collecting data because that's getting them the data,
+这就是为什么你在湾区看到如此多的自动驾驶汽车在收集数据，因为那是在为它们获取数据，
+
+148
+00:14:51.550 --> 00:14:57.690
+and they don't have to really annotate the data, but they can still train models based on.
+而且它们实际上不必标注这些数据，但仍然可以基于此训练模型。
+
+149
+00:14:57.690 --> 00:15:06.990
+So with that, today's agenda will cover some of these pretext tasks from image transformations,
+那么，今天的议程将涵盖一些基于图像变换的预置任务，
+
+150
+00:15:06.990 --> 00:15:13.490
+and then I will talk a little bit about a set of algorithms that are
+然后我将稍微谈一谈一系列
+
+151
+00:15:13.490 --> 00:15:19.330
+around contrastive representation learning that
+围绕对比表示学习的算法，这些算法
+
+152
+00:15:19.330 --> 00:15:26.450
+are slightly different from these image transformation based pretext tasks but have shown promise.
+与这些基于图像变换的预置任务略有不同，但已展现出潜力。
+
+153
+00:15:26.450 --> 00:15:30.450
+So let's start with the first part.
+那么，让我们从第一部分开始。
+
+154
+00:15:30.450 --> 00:15:36.460
+And there we will cover the tasks one by one.
+我们将逐一介绍这些任务。
+
+155
+00:15:36.460 --> 00:15:41.720
+So I talked quite a lot about rotation, predicting rotations.
+关于旋转，即预测旋转角度，我已经讲了很多。
+
+156
+00:15:41.720 --> 00:15:54.300
+Let's see if we can actually rotate the images with random or arbitrary degrees and predict the rotation
+让我们看看能否以随机或任意角度旋转图像，并用模型预测其旋转
+
+157
+00:15:54.300 --> 00:15:56.840
+angle with a model.
+角度。
+
+158
+00:15:56.840 --> 00:16:05.380
+And our hypothesis here is that the model, a model could recognize the correct rotation of an object
+我们在此的假设是，模型能够识别物体的正确旋转方向
+
+159
+00:16:05.380 --> 00:16:09.940
+only if it has the common sense visual common
+只有当它具备视觉常识，即物体未受干扰时应有的样子的常识时，才行。
+
+160
+00:16:09.940 --> 00:16:14.660
+sense of what the object should look like unperturbed.
+即物体未受干扰时应有的样子的常识。
+
+161
+00:16:14.660 --> 00:16:23.420
+So these models mostly are designed around this concept of visual common sense.
+因此，这些模型大多是围绕这种视觉常识的概念设计的。
+
+162
+00:16:23.420 --> 00:16:32.870
+And then if the model is able to capture that it means that it is also able to summarize
+然后，如果模型能够捕捉到这一点，就意味着它也能够将
+
+163
+00:16:32.870 --> 00:16:40.050
+the image, the entire image, into a useful set of features,
+整个图像总结为一组有用的特征，
+
+164
+00:16:40.050 --> 00:16:42.150
+good features.
+即好的特征。
+
+165
+00:16:42.150 --> 00:16:53.350
+This paper published in 2018 implemented this with just exploring four different angles of 0,
+这篇发表于2018年的论文通过仅探索0度、
+
+166
+00:16:53.350 --> 00:17:03.750
+19, 90, 180, and 270, these rotating images with one
+90度、180度和270度这四种不同的角度来实现这一点，用这些角度之一旋转图像，
+
+167
+00:17:03.750 --> 00:17:12.150
+of these angles and then using a convolutional neural network to basically predict what each of these
+然后使用卷积神经网络来基本预测每张图像
+
+168
+00:17:12.150 --> 00:17:14.190
+rotations the output is.
+的旋转输出是哪一个。
+
+169
+00:17:14.190 --> 00:17:19.510
+And because they only created four different outputs, this is a classification task because it only
+并且由于他们只创建了四种不同的输出，这是一个分类任务，因为它只有
+
+170
+00:17:19.510 --> 00:17:21.230
+has four different cases.
+有四种不同的情况。
+
+171
+00:17:21.230 --> 00:17:26.089
+It doesn't have to predict the exact value of the angle, the degrees.
+它不必预测角度的精确值，即度数。
+
+172
+00:17:26.089 --> 00:17:38.016
+But it's actually just predicting one of these four classes of 0, 1, 2, or 3.
+
+
+173
+00:17:38.016 --> 00:17:42.000
+y0, 1, 2, or 3.
+
+
+174
+00:17:42.000 --> 00:17:50.920
+So with that, the authors were able to learn good representations.
+
+
+175
+00:17:50.920 --> 00:18:00.640
+And with those representations, they started training the neural network at a downstream application, basically fine
+
+
+176
+00:18:00.640 --> 00:18:07.520
+tuning the neural network based on fine tuning the encoders
+
+
+177
+00:18:07.520 --> 00:18:12.740
+and also the classifier.
+
+
+178
+00:18:12.740 --> 00:18:23.560
+Actually, in this case, they froze first and second layers, and then they fine tuned the last convolution
+
+
+179
+00:18:23.560 --> 00:18:25.060
+layer and the linear layer.
+
+
+180
+00:18:25.060 --> 00:18:35.910
+So it's not entirely fine tuning the entire network, but they were able to get very good results.
+
+
+181
+00:18:35.910 --> 00:18:42.330
+This is on CIFAR10 data set, one of the data sets that we've talked about earlier.
+
+
+182
+00:18:42.330 --> 00:18:48.430
+You see that when the model is pre-trained, it starts with a good accuracy to start with.
+
+
+183
+00:18:48.430 --> 00:18:57.330
+So it means that it already is in a good shape, and it's having a good understanding of the objects,
+
+
+184
+00:18:57.330 --> 00:19:01.810
+even in the very first iterations.
+
+
+185
+00:19:01.810 --> 00:19:09.250
+But if the task is simple enough, CIFAR10 is actually not too hard to train a model for.
+
+
+186
+00:19:09.250 --> 00:19:14.810
+If the task is simple enough, the supervised version, the fully supervised version, and the one that
+
+
+187
+00:19:14.810 --> 00:19:17.510
+starts with pre-training, often converge to the same number,
+
+
+188
+00:19:17.510 --> 00:19:19.450
+same accuracy.
+
+
+189
+00:19:19.450 --> 00:19:25.130
+But again, if the task is simple enough, in very hard application, in much harder to applications,
+
+
+190
+00:19:25.130 --> 00:19:31.270
+often the supervised learning frameworks, if we don't do any pre-training, large scale pre-training, we don't get as good results.
+
+
+191
+00:19:31.270 --> 00:19:34.270
+OK.
+
+
+192
+00:19:34.270 --> 00:19:51.110
+So they've done also some applications, some experiments on this PASCAL VOC 2017 data
+
+
+193
+00:19:51.110 --> 00:19:59.510
+sets which involves a number of tasks, including classification, detection, and segmentation.
+
+
+194
+00:19:59.510 --> 00:20:10.870
+And of these three sets of tasks, they've used different setups of just training a few fully connected layers or all
+
+
+195
+00:20:10.870 --> 00:20:16.550
+of the layers for the classification, detection, and segmentation tasks.
+
+
+196
+00:20:16.550 --> 00:20:23.360
+If you look at the ImageNet labels, like if we have a huge labeled data set,
+
+
+197
+00:20:23.360 --> 00:20:27.160
+and we pre-train on that data set.
+
+
+198
+00:20:27.160 --> 00:20:29.340
+We already get a very high accuracy.
+
+
+199
+00:20:29.340 --> 00:20:34.080
+But again, have this in mind that this is ImageNet with all of the labels involved
+
+
+200
+00:20:34.080 --> 00:20:36.360
+for the pre-training.
+
+
+201
+00:20:36.360 --> 00:20:44.140
+But if we don't do any supervised pre-training, and the pre-training is all based on self-supervised,
+
+
+202
+00:20:44.140 --> 00:20:54.780
+it's showing that this rotation framework is doing a much better job than many of the other counterparts,
+
+
+203
+00:20:54.780 --> 00:21:04.540
+any of the other methods that we don't actually go into many of the detail of many of those,
+
+
+204
+00:21:04.540 --> 00:21:09.720
+but it's showing efficacy for this rotation pretext task.
+
+
+205
+00:21:09.720 --> 00:21:17.960
+And see how it's different, how much better it is if you start with a random initialization of the weights.
+
+
+206
+00:21:17.960 --> 00:21:24.130
+So the random initialization versus this pretraining with rotation, pretext task.
+
+
+207
+00:21:24.130 --> 00:21:33.610
+The difference is huge, and this rotation pretext task is not equal, but it's close to pre-training
+
+
+208
+00:21:33.610 --> 00:21:35.730
+on the entire ImageNet.
+
+
+209
+00:21:35.730 --> 00:21:43.410
+So one other thing that they've looked into in this paper was looking at the features
+
+
+210
+00:21:43.410 --> 00:21:48.850
+and how the learned features are meaningful.
+
+
+211
+00:21:48.850 --> 00:21:56.930
+I mentioned earlier that one of the ways of evaluating the pretext tasks, generally self-supervised
+
+
+212
+00:21:56.930 --> 00:21:59.070
+learning frameworks, is to look at the features.
+
+
+213
+00:21:59.070 --> 00:22:03.730
+And you can always go from the features from the fully connected layers.
+
+
+214
+00:22:03.730 --> 00:22:10.690
+We talked about grad cam and all of those other attention-based frameworks, how we can go from the features
+
+
+215
+00:22:10.690 --> 00:22:12.330
+back to the image space.
+
+
+216
+00:22:12.330 --> 00:22:19.380
+So this evaluation involves projecting those into the image space and seeing what the model is looking at.
+
+
+217
+00:22:19.380 --> 00:22:25.180
+If you look at the attention maps for the supervised model, often the supervised model has more
+
+
+218
+00:22:25.180 --> 00:22:29.900
+focused maps because it's only trying
+
+
+219
+00:22:29.900 --> 00:22:33.080
+to solve one single task of classification.
+
+
+220
+00:22:33.080 --> 00:22:39.460
+So if it captures the eye and the shape around it, it doesn't care about the other parts very much.
+
+
+221
+00:22:39.460 --> 00:22:50.580
+But in cases of self-supervised learning, often, more features, more areas are covered because it has to have a more holistic understanding
+
+
+222
+00:22:50.580 --> 00:22:55.460
+of the image because we don't know what the downstream task is, but the goal
+
+
+223
+00:22:55.460 --> 00:23:00.060
+is to perform equally well in many of those.
+
+
+224
+00:23:00.060 --> 00:23:02.940
+So that's one of the tasks.
+
+
+225
+00:23:02.940 --> 00:23:05.240
+If you do have any questions, keep it.
+
+
+226
+00:23:05.240 --> 00:23:08.540
+I'll stop after going over some of the tasks.
+
+
+227
+00:23:08.540 --> 00:23:13.940
+And if your question was not answered, then I would be happy to answer that.
+
+
+228
+00:23:13.940 --> 00:23:16.710
+OK.
+
+
+229
+00:23:16.710 --> 00:23:26.910
+Another one, another popular pretext task was to basically create this 3 by 3 grid
+
+
+230
+00:23:26.910 --> 00:23:36.310
+and then use networks to predict the location of each of the given patches with respect to the sensor patch.
+
+
+231
+00:23:36.310 --> 00:23:46.950
+So for this patch, which is from here, the output should be 3 because we only have 8--
+
+
+232
+00:23:46.950 --> 00:23:50.450
+This is 3 by 3, and the center patch is the reference.
+
+
+233
+00:23:50.450 --> 00:23:56.270
+So this also turns out to be an eight-way classification task.
+
+
+234
+00:23:56.270 --> 00:24:04.630
+It's getting any of these patches, and it's trying to output what the location of that given patch
+
+
+235
+00:24:04.630 --> 00:24:11.300
+is with respect to the center patch.
+
+
+236
+00:24:16.200 --> 00:24:18.780
+So this was another example.
+
+
+237
+00:24:18.780 --> 00:24:29.520
+But this other follow-up paper, paper publication, which turned this into a jigsaw puzzle framework,
+
+
+238
+00:24:29.520 --> 00:24:37.240
+was instead of asking the model to just predict which of these eight patches it is,
+
+
+239
+00:24:37.240 --> 00:24:42.020
+it tried to predict the exact permutation, the right permutation.
+
+
+240
+00:24:42.020 --> 00:24:50.960
+So what they've done was they used the same three by three grid, took all of the patches, shuffled them randomly, and then
+
+
+241
+00:24:50.960 --> 00:24:59.080
+ask the neural network to say which one should
+
+
+242
+00:24:59.080 --> 00:25:01.480
+be the correct permutation.
+
+
+243
+00:25:01.480 --> 00:25:04.277
+So they basically predict the correct permutations.
+
+
+244
+00:25:04.277 --> 00:25:11.840
+Can you tell me what is the number of permutations you can have for this setup?
+
+
+245
+00:25:11.840 --> 00:25:13.250
+Say again?
+
+
+246
+00:25:13.250 --> 00:25:14.110
+9 factorial.
+
+
+247
+00:25:14.110 --> 00:25:14.750
+Yes, exactly.
+
+
+248
+00:25:14.750 --> 00:25:16.570
+So it's a huge number, right?
+
+
+249
+00:25:16.570 --> 00:25:19.930
+300,000 something, I think.
+
+
+250
+00:25:19.930 --> 00:25:32.130
+But what they've done was they've created this lookup table with only 64 plausible, possible
+
+
+251
+00:25:32.130 --> 00:25:33.410
+permutations.
+
+
+252
+00:25:33.410 --> 00:25:38.030
+And then only they consider 64 permutations.
+
+
+253
+00:25:38.030 --> 00:25:43.230
+And then they're shuffling that, they do the shuffling based on one of these 64.
+
+
+254
+00:25:43.230 --> 00:25:48.330
+And then the output will also be just the 60, 64 sized vector.
+
+
+255
+00:25:48.330 --> 00:25:56.090
+So again, this turns out to be just a simple classification task with 64 output classes.
+
+
+256
+00:25:56.090 --> 00:26:04.470
+And they've shown this is also a great idea for solving to define as a pretext task,
+
+
+257
+00:26:04.470 --> 00:26:14.110
+and on the same data set with similar type of tasks that I talked about and how the supervision is done.
+
+
+258
+00:26:14.110 --> 00:26:25.190
+They've shown their method was outperforming some of the more previous models, previous frameworks.
+
+
+259
+00:26:25.190 --> 00:26:30.870
+And again, remember that this was published in 2016.
+
+
+260
+00:26:30.870 --> 00:26:38.710
+So next pretext task is just inpainting predicting what is missing.
+
+
+261
+00:26:38.710 --> 00:26:47.590
+So what they have done here was a simple masking strategy, you mask parts of the image and then you
+
+
+262
+00:26:47.590 --> 00:26:51.230
+ask the model to inpaint those parts that are masked.
+
+
+263
+00:26:51.230 --> 00:26:57.010
+So how it was done, simple masking on the input image.
+
+
+264
+00:26:57.010 --> 00:27:02.790
+But because we have all of the images, we actually have the desired output.
+
+
+265
+00:27:02.790 --> 00:27:08.816
+So an encoder turns this into a feature space, and then that feature space is also,
+
+
+266
+00:27:08.816 --> 00:27:14.840
+there are some fully connected layers in the middle, and then there is a decoder that decodes
+
+
+267
+00:27:14.840 --> 00:27:16.920
+the parts that is missing.
+
+
+268
+00:27:16.920 --> 00:27:27.720
+And the loss function is comparing the output with what the ground truth was.
+
+
+269
+00:27:27.720 --> 00:27:34.560
+And this is basically learning to reconstruct the missing pixels.
+
+
+270
+00:27:34.560 --> 00:27:43.360
+Again, we've talked about autoencoders a couple of times before, and this is also some form of an autoencoder that
+
+
+271
+00:27:43.360 --> 00:27:47.720
+encodes the input image into a representation
+
+
+272
+00:27:47.720 --> 00:27:51.860
+that you want to decode the output.
+
+
+273
+00:27:51.860 --> 00:27:58.760
+But this autoencoder is trained with a masking strategy, masking objective.
+
+
+274
+00:27:58.760 --> 00:28:10.710
+So just to show you some examples, the inpainting evaluations are a little bit interesting and tricky because when you want to inpaint,
+
+
+275
+00:28:10.710 --> 00:28:13.630
+there are so many different ways of inpainting this image, right?
+
+
+276
+00:28:13.630 --> 00:28:26.570
+And we can say there is just one output to do in this case here.
+
+
+277
+00:28:26.570 --> 00:28:42.410
+Reconstruction-based frameworks, earlier reconstruction-based frameworks were actually creating a lot of fuzzy and very smooth outputs.
+
+
+278
+00:28:42.410 --> 00:28:54.250
+And that's why this paper that I'm referring to here was actually using an additional adversarial objective
+
+
+279
+00:28:54.250 --> 00:29:00.950
+function, which I'm not going to go into details because this is a topic of discussion for the next lecture, generative models.
+
+
+280
+00:29:00.950 --> 00:29:07.680
+But generally, how these frameworks work, we have a reconstruction loss.
+
+
+281
+00:29:07.680 --> 00:29:18.660
+And reconstruction loss is basically calculating the difference between the patch, between the image x and the image after it's
+
+
+282
+00:29:18.660 --> 00:29:24.340
+passed through the encoder.
+
+
+283
+00:29:24.340 --> 00:29:33.340
+And then this is element wise multiplication.
+
+
+284
+00:29:33.340 --> 00:29:38.300
+And we also have this mask here because we want to only calculate the loss function,
+
+
+285
+00:29:38.300 --> 00:29:41.520
+the objective function, only on the masked area.
+
+
+286
+00:29:41.520 --> 00:29:46.020
+So we do element wise multiplication with the mask as well.
+
+
+287
+00:29:46.020 --> 00:29:55.800
+And this basically gives us the reconstruction loss for that part of the mask that we had.
+
+
+288
+00:29:55.800 --> 00:30:09.070
+So as I said, it's also supplemented with an adversarial objective adversarial learning loss function, which ensures the images that are generated
+
+
+289
+00:30:09.070 --> 00:30:10.910
+are real looking.
+
+
+290
+00:30:10.910 --> 00:30:24.830
+So with that, they have been able to improve the parts that are reconstructed to look a little bit better.
+
+
+291
+00:30:24.830 --> 00:30:31.630
+But again, details will be discussed in the next lecture.
+
+
+292
+00:30:31.630 --> 00:30:43.190
+So this reconstruction framework was actually able to again provide, and this ours is the same, provide additional benefit when
+
+
+293
+00:30:43.190 --> 00:30:52.710
+it's run on the same classification, detection, and segmentation task on same set of data sets.
+
+
+294
+00:30:52.710 --> 00:30:59.110
+I will come back to this reconstruction-based frameworks and masking in a bit because it's
+
+
+295
+00:30:59.110 --> 00:31:05.440
+one of the most used models or pretext tasks that these days
+
+
+296
+00:31:05.440 --> 00:31:07.800
+are used for pre-training.
+
+
+297
+00:31:07.800 --> 00:31:10.140
+So I'll come back to this.
+
+
+298
+00:31:10.140 --> 00:31:19.200
+But before that, let me introduce this other pretext task of image coloring.
+
+
+299
+00:31:19.200 --> 00:31:30.023
+And this is another very simple framework setup that we turn a colored image because our data set is mostly
+
+
+300
+00:31:30.023 --> 00:31:30.940
+colored images, right?
+
+
+301
+00:31:30.940 --> 00:31:41.880
+We turn that colored image into its components or channels that separate the lightness, the illumination from the color
+
+
+302
+00:31:41.880 --> 00:31:42.500
+itself.
+
+
+303
+00:31:42.500 --> 00:31:47.160
+There are several color spaces if you've taken courses like computer graphics
+
+
+304
+00:31:47.160 --> 00:31:51.060
+or CS-131, other computer vision class.
+
+
+305
+00:31:51.060 --> 00:31:54.900
+You know that there are so many different color spaces.
+
+
+306
+00:31:54.900 --> 00:31:57.960
+Mostly, in computer vision, we use RGB.
+
+
+307
+00:31:57.960 --> 00:32:04.830
+But if you want to separate lightness, illumination from color, there are some other color spaces.
+
+
+308
+00:32:04.830 --> 00:32:14.410
+For example, LAB color space, LAB, is one of those color spaces that separates lightness from color.
+
+
+309
+00:32:14.410 --> 00:32:21.970
+So we have one channel for lightness and two channels for defining the actual color.
+
+
+310
+00:32:21.970 --> 00:32:29.730
+And if we add these two all together L, A, and B, all three channels together, we can actually
+
+
+311
+00:32:29.730 --> 00:32:31.850
+get the colored image.
+
+
+312
+00:32:31.850 --> 00:32:34.770
+So the pretext task here is simple.
+
+
+313
+00:32:34.770 --> 00:32:40.690
+Given the L channel, predict the A and B channels, right?
+
+
+314
+00:32:40.690 --> 00:32:44.310
+So again, we don't need to do any manual annotation.
+
+
+315
+00:32:44.310 --> 00:32:47.530
+It's already in the data.
+
+
+316
+00:32:47.530 --> 00:32:52.150
+And this was extended into other frameworks.
+
+
+317
+00:32:52.150 --> 00:32:56.730
+Why should we only look at like given L, predict A and B.
+
+
+318
+00:32:56.730 --> 00:32:58.860
+We can also do the reverse, right?
+
+
+319
+00:32:58.860 --> 00:33:06.660
+And that led us to split, something that we call a split brain autoencoder, where
+
+
+320
+00:33:06.660 --> 00:33:12.300
+the input image is split, is basically turned into one.
+
+
+321
+00:33:12.300 --> 00:33:16.140
+The L channel, lightness channel, and the color channels.
+
+
+322
+00:33:16.140 --> 00:33:18.480
+These two images, this is one channel.
+
+
+323
+00:33:18.480 --> 00:33:20.340
+This is two channels of color.
+
+
+324
+00:33:20.340 --> 00:33:26.780
+And we train two functions, two neural networks, sets of layers to predict the other one.
+
+
+325
+00:33:26.780 --> 00:33:34.300
+And then at the end, in order to calculate the loss function and backprop, we just merge these two
+
+
+326
+00:33:34.300 --> 00:33:39.600
+to generate the actual image and a loss an L2 loss.
+
+
+327
+00:33:39.600 --> 00:33:45.180
+Any distance function can help with training this neural network.
+
+
+328
+00:33:45.180 --> 00:33:55.280
+In a more generic framework or formulation, the idea is given one channel or a set of channels,
+
+
+329
+00:33:55.280 --> 00:34:00.920
+predict the others, and do the same for X2.
+
+
+330
+00:34:00.920 --> 00:34:04.760
+So sets of channels X1, sets of channels X2.
+
+
+331
+00:34:04.760 --> 00:34:09.360
+So given one we can predict the other one, and these are the neural networks for those.
+
+
+332
+00:34:09.360 --> 00:34:18.800
+Merging them we'll get the value the image and then loss function would be simple.
+
+
+333
+00:34:18.800 --> 00:34:25.470
+So if we have such a framework we can run it on everything, not just color and illumination.
+
+
+334
+00:34:25.470 --> 00:34:35.980
+We can have data from some of these RGBD sensors, those that have RGB channels and depth channels,
+
+
+335
+00:34:35.980 --> 00:34:40.719
+like for example, connect and other sensors that they use in robotics.
+
+
+336
+00:34:40.719 --> 00:34:47.320
+And given the RGB channel, predict the depth and vice versa.
+
+
+337
+00:34:47.320 --> 00:34:54.800
+And this was a very successful downstream task that was used for different applications.
+
+
+338
+00:34:54.800 --> 00:35:06.330
+And as you can see this model and this paper that I just the split brain and the papers that the model that
+
+
+339
+00:35:06.330 --> 00:35:12.150
+predicts colorizes the images is those features themselves.
+
+
+340
+00:35:12.150 --> 00:35:19.110
+They do have actually a very good level of accuracy for predicting the class labels.
+
+
+341
+00:35:19.110 --> 00:35:29.250
+And you can see, there are many different other frameworks that are used also in terms of comparisons.
+
+
+342
+00:35:29.250 --> 00:35:36.170
+Again, this is not as good as supervised learning because there is no label involved here
+
+
+343
+00:35:36.170 --> 00:35:40.450
+and it's just based on the learned features
+
+
+344
+00:35:40.450 --> 00:35:43.690
+with concatenated features out of F1 and F2.
+
+
+345
+00:35:43.690 --> 00:35:55.100
+OK, so the image coloring pretext task was actually very interesting because now we could not only
+
+
+346
+00:35:55.100 --> 00:35:59.600
+use it for pre-training neural networks, but it was also itself useful somehow,
+
+
+347
+00:35:59.600 --> 00:36:05.560
+because now we could colorize images that we don't have a colored version.
+
+
+348
+00:36:05.560 --> 00:36:15.100
+So we could colorize images and videos that we don't have a colored version of those.
+
+
+349
+00:36:15.100 --> 00:36:21.220
+And not only that, one of the other interesting results that they've shown in the paper was
+
+
+350
+00:36:21.220 --> 00:36:27.900
+this image of Yosemite and the Half Dome that they colorized.
+
+
+351
+00:36:27.900 --> 00:36:36.720
+The interesting thing that is seen in this image is the consistency between the actual object,
+
+
+352
+00:36:36.720 --> 00:36:41.420
+the Half Dome or trees, or the bridge and its reflection in the water.
+
+
+353
+00:36:41.420 --> 00:36:51.430
+So the model was also able to understand that this reflection should also somehow preserve the color based on how it was trained
+
+
+354
+00:36:51.430 --> 00:36:53.430
+on vast amounts of data.
+
+
+355
+00:36:53.430 --> 00:37:01.690
+Again, keep in mind that these models are all pre-large language, large vision models.
+
+
+356
+00:37:01.690 --> 00:37:04.390
+And they have been trained on specific tasks.
+
+
+357
+00:37:04.390 --> 00:37:09.830
+So they're not trained for solving everything.
+
+
+358
+00:37:09.830 --> 00:37:14.250
+So this could be actually extended into video settings.
+
+
+359
+00:37:14.250 --> 00:37:21.270
+Because now if we have a video, we can have a reference frame that has the color and do the coloring for the follow-up
+
+
+360
+00:37:21.270 --> 00:37:23.330
+frames and how this is done.
+
+
+361
+00:37:23.330 --> 00:37:32.350
+This is very simple because with-- this is also very useful because with colorizing future frames
+
+
+362
+00:37:32.350 --> 00:37:34.510
+in the video, what we are doing is
+
+
+363
+00:37:34.510 --> 00:37:44.390
+we basically try to track pixels and objects in the video, and the model implicitly learns how
+
+
+364
+00:37:44.390 --> 00:37:47.570
+these tracks should be formed.
+
+
+365
+00:37:47.570 --> 00:37:54.200
+So the hypothesis is learning to color video frames should allow a model to learn to track regions
+
+
+366
+00:37:54.200 --> 00:37:56.610
+or objects without labels.
+
+
+367
+00:37:59.720 --> 00:38:06.740
+And learning to color videos because there are a lot of correspondences is an interesting task by itself.
+
+
+368
+00:38:06.740 --> 00:38:10.660
+I would suggest taking a look at the details.
+
+
+369
+00:38:10.660 --> 00:38:13.760
+I'll very briefly to talk about them.
+
+
+370
+00:38:13.760 --> 00:38:20.180
+So if you have a reference frame, what we need to do is for coloring the input frame,
+
+
+371
+00:38:20.180 --> 00:38:26.520
+we need to find the pointers of where that's a specific object or pixel is.
+
+
+372
+00:38:26.520 --> 00:38:31.760
+And then based on that see what the color is and copy what the color is as the color
+
+
+373
+00:38:31.760 --> 00:38:36.280
+for that pixel as the output, as the target color.
+
+
+374
+00:38:36.280 --> 00:38:43.680
+And how this is done is very much similar to the same topic of attention that we talked about.
+
+
+375
+00:38:43.680 --> 00:38:51.730
+So it's about forming attention for each of the pixels for each input frame, sorry reference
+
+
+376
+00:38:51.730 --> 00:38:53.610
+frame and target frame.
+
+
+377
+00:38:53.610 --> 00:38:59.550
+We often run a CNN to see what features around those pixels should be used.
+
+
+378
+00:38:59.550 --> 00:39:05.330
+And using those features, now we can calculate, for each of the target pixels, we
+
+
+379
+00:39:05.330 --> 00:39:13.970
+can calculate the attention or the distance to all of the frames, all of the pixels in the reference frame.
+
+
+380
+00:39:13.970 --> 00:39:25.930
+And then after defining this attention with respect to the pixel of interest in the target
+
+
+381
+00:39:25.930 --> 00:39:31.510
+frame with all of the pixels in the reference frame.
+
+
+382
+00:39:31.510 --> 00:39:38.830
+Now we can do an average color of all of based on those attention modules.
+
+
+383
+00:39:38.830 --> 00:39:42.170
+So attention is basically just similarity between the two.
+
+
+384
+00:39:42.170 --> 00:39:48.180
+So anyways with that, what we can do is we can just get the output color
+
+
+385
+00:39:48.180 --> 00:39:55.300
+as an average with that tension and then ultimately calculate
+
+
+386
+00:39:55.300 --> 00:40:04.580
+the loss function because we have the values of the colors, the right colors of those pixels in our data.
+
+
+387
+00:40:04.580 --> 00:40:10.280
+And this was able to, with this reference frame, colorize the images.
+
+
+388
+00:40:10.280 --> 00:40:15.480
+You see how consistent this becomes in terms of coloring.
+
+
+389
+00:40:15.480 --> 00:40:25.100
+If we color them separately without this consistency over time, you often see, for example, the person's shirt
+
+
+390
+00:40:25.100 --> 00:40:32.180
+or clothing changes color because there is no constraint
+
+
+391
+00:40:32.180 --> 00:40:34.220
+to keep it consistent.
+
+
+392
+00:40:34.220 --> 00:40:42.500
+And then there has been also some very interesting applications, because now that you are calculating attention
+
+
+393
+00:40:42.500 --> 00:40:44.750
+to a reference frame, you're actually
+
+
+394
+00:40:44.750 --> 00:40:54.710
+able to track objects, track segments in videos, and even identify key points in the videos.
+
+
+395
+00:40:54.710 --> 00:40:56.010
+That's a good question.
+
+
+396
+00:40:56.010 --> 00:41:09.270
+You're asking your question is about this slide basically, and how the encoder knows about the data to begin with
+
+
+397
+00:41:09.270 --> 00:41:13.450
+and gets us good learned representations.
+
+
+398
+00:41:13.450 --> 00:41:26.030
+So all of these tasks that I presented and defined are trying to do something here at either decoding, classifying,
+
+
+399
+00:41:26.030 --> 00:41:32.730
+or using regression to generate some outputs to be able to train this encoder.
+
+
+400
+00:41:32.730 --> 00:41:37.990
+So if your original images, if these are all natural images taken off of internet or ImageNet
+
+
+401
+00:41:37.990 --> 00:41:45.730
+or whatever, then you are learning an encoder that can extract features from those types of images
+
+
+402
+00:41:45.730 --> 00:41:47.330
+with the pretext task.
+
+
+403
+00:41:47.330 --> 00:41:56.310
+And then when you remove the decoder and add this classifier to the end, you only need to train this part,
+
+
+404
+00:41:56.310 --> 00:42:02.467
+because this encoder was already trained with all of these pre-training tasks that I just talked about.
+
+
+405
+00:42:02.467 --> 00:42:07.290
+You're asking if the labels are coming from the decoder for pre-training the encoder,
+
+
+406
+00:42:07.290 --> 00:42:09.950
+and the answer to that is, yes.
+
+
+407
+00:42:09.950 --> 00:42:16.030
+That's why we define the pretext tasks, because we want to have some labels, some outputs.
+
+
+408
+00:42:16.030 --> 00:42:23.270
+And then based on those outputs we try to train this entire network.
+
+
+409
+00:42:23.270 --> 00:42:31.290
+And on the way of predicting the right labels, this encoder is also trained.
+
+
+410
+00:42:31.290 --> 00:42:32.070
+Good question.
+
+
+411
+00:42:32.070 --> 00:42:37.610
+You're asking if encoder and decoder are one big neural network or there is differences.
+
+
+412
+00:42:37.610 --> 00:42:44.380
+In different papers, in different works, it has been completely different.
+
+
+413
+00:42:44.380 --> 00:42:49.700
+In some cases, your encoder and not just decoder, that's why I'm calling it classifier.
+
+
+414
+00:42:49.700 --> 00:42:57.060
+In the example that I showed you about predicting the degree, this is just a simple neural network.
+
+
+415
+00:42:57.060 --> 00:42:59.680
+The decoder is these FC layers.
+
+
+416
+00:42:59.680 --> 00:43:02.700
+So this could be one entire network.
+
+
+417
+00:43:02.700 --> 00:43:06.580
+And then you're replacing it with something for your downstream task.
+
+
+418
+00:43:06.580 --> 00:43:14.500
+But in some cases, for example, when I talked about auto encoding an image and then decoding another image,
+
+
+419
+00:43:14.500 --> 00:43:21.500
+you often have two neural networks that are trained end-to-end because you want to make use of that representation space
+
+
+420
+00:43:21.500 --> 00:43:22.660
+in the middle.
+
+
+421
+00:43:22.660 --> 00:43:31.260
+And in the next thing that I want to talk about, masked autoencoders, even there is no symmetry between encoders
+
+
+422
+00:43:31.260 --> 00:43:32.320
+and decoders.
+
+
+423
+00:43:32.320 --> 00:43:39.590
+They can be just two different frameworks, two different neural networks, even without any symmetry
+
+
+424
+00:43:39.590 --> 00:43:43.330
+to train the task.
+
+
+425
+00:43:43.330 --> 00:43:47.150
+So this is very much task dependent, pretext task dependent.
+
+
+426
+00:43:47.150 --> 00:43:55.230
+But there could be belonging to the same architecture that we know about, say, CNN or ResNet,
+
+
+427
+00:43:55.230 --> 00:44:00.390
+or there could be two different architectures, even without any symmetry.
+
+
+428
+00:44:00.390 --> 00:44:08.270
+Remember that these are the very first methods for self-supervised learning.
+
+
+429
+00:44:08.270 --> 00:44:11.070
+So they're not supposed to be solving everything.
+
+
+430
+00:44:11.070 --> 00:44:17.230
+That's just a quick disclaimer, but the idea is, the hypothesis here is, if the model is
+
+
+431
+00:44:17.230 --> 00:44:20.250
+able to say this is 90 degree rotated,
+
+
+432
+00:44:20.250 --> 00:44:28.970
+it means that implicitly, it's understanding the right rotation, sorry, right orientation and direction.
+
+
+433
+00:44:28.970 --> 00:44:39.360
+And then it will be able to if given a right an unrotated image, it's able to recognize
+
+
+434
+00:44:39.360 --> 00:44:42.260
+what it is in it.
+
+
+435
+00:44:42.260 --> 00:44:46.440
+But this is a limited task by itself, I agree with that.
+
+
+436
+00:44:46.440 --> 00:44:49.240
+The question that you have is why here they use 64.
+
+
+437
+00:44:52.680 --> 00:44:54.480
+That's a good question.
+
+
+438
+00:44:54.480 --> 00:44:59.000
+But that's also an arbitrary choice, almost arbitrary choice.
+
+
+439
+00:44:59.000 --> 00:45:05.920
+As I said, there are many different types of different number of permutations here 9 factorial.
+
+
+440
+00:45:05.920 --> 00:45:07.520
+So it's a very big number.
+
+
+441
+00:45:07.520 --> 00:45:10.620
+It doesn't make sense for us to be predicting all of those.
+
+
+442
+00:45:10.620 --> 00:45:19.080
+What the authors did here, they decided to select a few of those perturbations that there is enough variation because many
+
+
+443
+00:45:19.080 --> 00:45:24.420
+of those perturbations is just like one patch switched only.
+
+
+444
+00:45:24.420 --> 00:45:31.660
+So they selected 64 of those that they have the largest difference distance between them,
+
+
+445
+00:45:31.660 --> 00:45:38.960
+and they just selected 64 because they wanted to solve the classification problem instead of other types of tasks.
+
+
+446
+00:45:41.570 --> 00:45:42.410
+OK.
+
+
+447
+00:45:42.410 --> 00:45:54.130
+So I've been talking about these frameworks that often do some transformation on the image or the videos
+
+
+448
+00:45:54.130 --> 00:45:55.070
+and so on.
+
+
+449
+00:45:55.070 --> 00:46:00.950
+And this brings us to this newer framework, which is published in 2021.
+
+
+450
+00:46:00.950 --> 00:46:11.670
+And then there has been so many follow-ups on this, and it's been a great framework for pre-training for many tasks,
+
+
+451
+00:46:11.670 --> 00:46:21.850
+even if these days when we want to pre-train on a data set on raw data sets, we often use this MAE framework.
+
+
+452
+00:46:21.850 --> 00:46:24.410
+It's called Masked Auto Encoders.
+
+
+453
+00:46:24.410 --> 00:46:30.670
+It is also reconstruction based framework similar to that masking strategy in painting that I mentioned,
+
+
+454
+00:46:30.670 --> 00:46:34.900
+but this is far more detailed.
+
+
+455
+00:46:34.900 --> 00:46:41.680
+And as you can see, this framework is not just selecting one mask.
+
+
+456
+00:46:41.680 --> 00:46:48.940
+There are so many different patches and places that they do masking with even more aggressive sampling
+
+
+457
+00:46:48.940 --> 00:46:54.900
+rates, 50% masking or 75 masking rates and ratios.
+
+
+458
+00:46:54.900 --> 00:47:05.140
+And through training in larger scale, they have shown that not only they are able to reconstruct all of those masked areas,
+
+
+459
+00:47:05.140 --> 00:47:14.340
+they are also getting very good encoders that can summarize the images into good features.
+
+
+460
+00:47:14.340 --> 00:47:22.358
+And how this was done was through defining a encoder and a decoder.
+
+
+461
+00:47:22.358 --> 00:47:26.700
+And that's one of the examples that I said these are not symmetric.
+
+
+462
+00:47:26.700 --> 00:47:32.750
+And encoders and decoder, so a large portion of the input masks.
+
+
+463
+00:47:32.750 --> 00:47:43.470
+Input patches are masked and the ones that are not masked, they are given to the encoder to encode in two features that
+
+
+464
+00:47:43.470 --> 00:47:49.430
+are then passed through decoder to generate the complete image.
+
+
+465
+00:47:49.430 --> 00:47:53.890
+But let's go a little bit into details of what this means.
+
+
+466
+00:47:53.890 --> 00:47:59.030
+I do have some of the details on how these models are trained here.
+
+
+467
+00:47:59.030 --> 00:48:07.750
+But I very briefly just explained to you how these models often work.
+
+
+468
+00:48:07.750 --> 00:48:13.350
+The encoder here is very much similar to ViTs.
+
+
+469
+00:48:13.350 --> 00:48:18.870
+All of them are based on transformers, the ViTs that we've talked about.
+
+
+470
+00:48:18.870 --> 00:48:23.090
+Similar to the ViTs, the images are split into patches.
+
+
+471
+00:48:23.090 --> 00:48:32.960
+The patches are then sampled, so uniform sampling is what they've done and they've shown 75%
+
+
+472
+00:48:32.960 --> 00:48:40.240
+sampling was quite efficient in the experiments.
+
+
+473
+00:48:40.240 --> 00:48:50.440
+And they use a high masking ratio, and then this makes the prediction task very challenging
+
+
+474
+00:48:50.440 --> 00:48:58.700
+and challenging in the set of pretext for pretext tasks in self-supervised learning means the task is meaningful.
+
+
+475
+00:48:58.700 --> 00:49:05.560
+The task is very good because the model has to learn good features to be able to reconstruct it.
+
+
+476
+00:49:05.560 --> 00:49:14.040
+So with that high sampling, high ratio of sampling, what it can do is they can actually
+
+
+477
+00:49:14.040 --> 00:49:17.280
+augment the data by a lot too, because each time you
+
+
+478
+00:49:17.280 --> 00:49:23.220
+mask 75% of the data, so you can reuse the same image multiple and multiple times during training.
+
+
+479
+00:49:23.220 --> 00:49:29.620
+So you will have so much of data to train this encoder with.
+
+
+480
+00:49:29.620 --> 00:49:38.040
+And then that's why they use a huge encoder, a large ViT in as their encoder.
+
+
+481
+00:49:38.040 --> 00:49:43.320
+So this encoder itself only sees 25% of the samples.
+
+
+482
+00:49:43.320 --> 00:49:51.320
+The patches embeds those two with first linear projection to some embedding spaces.
+
+
+483
+00:49:51.320 --> 00:49:59.700
+Then positional embeddings are added exactly same as what we mentioned for ViTs.
+
+
+484
+00:49:59.700 --> 00:50:02.140
+And all of these are transformer blocks.
+
+
+485
+00:50:02.140 --> 00:50:09.600
+And the encoder is very large, that's what I just mentioned.
+
+
+486
+00:50:09.600 --> 00:50:17.060
+And then when it comes to the decoding part, so we have the embeddings of all of those patches
+
+
+487
+00:50:17.060 --> 00:50:21.820
+that were present for the patches that were masked
+
+
+488
+00:50:21.820 --> 00:50:23.260
+or were missing.
+
+
+489
+00:50:23.260 --> 00:50:29.230
+For those, there is a trainable parameter, very much similar to that class token that we had.
+
+
+490
+00:50:29.230 --> 00:50:36.990
+A shared masked masked token that is basically in some sort of average.
+
+
+491
+00:50:36.990 --> 00:50:43.750
+We can consider that as an average patch, an average representation that is put for the ones that
+
+
+492
+00:50:43.750 --> 00:50:48.950
+are missing are masked, and then the decoder has to transfer them
+
+
+493
+00:50:48.950 --> 00:51:02.190
+to the image patches of the entire image, and then the entire image is the output target is the output.
+
+
+494
+00:51:02.190 --> 00:51:16.150
+So how we train this, this is a simple MSE based mean squared error loss function for between the image
+
+
+495
+00:51:16.150 --> 00:51:25.960
+and the reconstructed image, the loss function is only computed for the masked patches similar to the previous one that I just talked about.
+
+
+496
+00:51:25.960 --> 00:51:33.520
+And then what it has is-- When we do the training, they've shown in the paper
+
+
+497
+00:51:33.520 --> 00:51:42.192
+that you can do either linear probing or full fine tuning
+
+
+498
+00:51:42.192 --> 00:51:47.560
+to use it for your downstream tasks, for any of the applications that you have in mind.
+
+
+499
+00:51:47.560 --> 00:51:55.000
+And in linear probing, what happens is you often have your encoder frozen and then use
+
+
+500
+00:51:55.000 --> 00:51:58.800
+the learned representations and only learn a linear function
+
+
+501
+00:51:58.800 --> 00:52:00.740
+for the final task.
+
+
+502
+00:52:00.740 --> 00:52:06.460
+And this mark, it means that it's being trained, but in full fine tuning, in fine tuning,
+
+
+503
+00:52:06.460 --> 00:52:14.560
+the pre-trained encoders are also fine tuned, either all of them or just few transformer blocks.
+
+
+504
+00:52:14.560 --> 00:52:19.420
+And that's the fine tuning framework.
+
+
+505
+00:52:19.420 --> 00:52:31.890
+The linear probing provides a measure of representation quality, how those representations features are, and fine tuning always exploits models
+
+
+506
+00:52:31.890 --> 00:52:37.250
+near to potential to adapt for new tasks.
+
+
+507
+00:52:37.250 --> 00:52:45.310
+OK, so if you're interested in this topic and if you're planning to use this paper,
+
+
+508
+00:52:45.310 --> 00:52:49.030
+I highly advise looking at the paper in its follow-ups.
+
+
+509
+00:52:49.030 --> 00:53:00.450
+There are so many discussions around different aspects model choices, hyperparameters, masking ratio is one thing they've shown with the masking ratio that the 75%
+
+
+510
+00:53:00.450 --> 00:53:04.150
+is actually giving them a very high accuracy.
+
+
+511
+00:53:04.150 --> 00:53:07.810
+So 75% that's the reason that it was chosen.
+
+
+512
+00:53:07.810 --> 00:53:18.530
+Decoder depth, decoder width, mask tokens, reconstruction targets, data augmentation how it's helpful
+
+
+513
+00:53:18.530 --> 00:53:22.160
+and mask sampling method I'm showing the results here again.
+
+
+514
+00:53:22.160 --> 00:53:30.500
+Mask sampling method is mostly around should they use some random masking blocks or grid
+
+
+515
+00:53:30.500 --> 00:53:31.520
+type of masking.
+
+
+516
+00:53:31.520 --> 00:53:39.620
+You see the examples here, and they've came to the conclusion that this random masking was the best choice.
+
+
+517
+00:53:39.620 --> 00:53:49.340
+And finally they've been able to show that MAE is doing a much better job compared
+
+
+518
+00:53:49.340 --> 00:53:53.960
+to many of the other methods that were used.
+
+
+519
+00:53:53.960 --> 00:53:58.760
+So some of the other state of the art methods were actually Dino and Moco V3.
+
+
+520
+00:53:58.760 --> 00:54:00.980
+If you have time, I will briefly go over them.
+
+
+521
+00:54:00.980 --> 00:54:13.660
+But this framework was actually outperforming those that are more at the time, advanced frameworks
+
+
+522
+00:54:13.660 --> 00:54:16.220
+of contrastive learning.
+
+
+523
+00:54:16.220 --> 00:54:22.850
+So I'll stop for a few questions if you have any.
+
+
+524
+00:54:22.850 --> 00:54:28.050
+Let me just summarize what we've talked about.
+
+
+525
+00:54:28.050 --> 00:54:30.970
+Pretext tasks were actually very important.
+
+
+526
+00:54:30.970 --> 00:54:36.230
+And as I said their focus is on understanding the visual common sense.
+
+
+527
+00:54:36.230 --> 00:54:44.150
+And one of the things that also related to some of the questions that were asked, we can see
+
+
+528
+00:54:44.150 --> 00:54:48.790
+is coming up with an individual pretext task is often
+
+
+529
+00:54:48.790 --> 00:54:58.190
+challenging because the learned representations may not be general enough because of the type of tasks that you define.
+
+
+530
+00:54:58.190 --> 00:55:11.670
+For example, if you're using completion, rotation prediction, or jigsaw puzzle or colorization, you learned representations are good for solving
+
+
+531
+00:55:11.670 --> 00:55:19.680
+those specific tasks, and they may not be very good for general pretext tasks.
+
+
+532
+00:55:19.680 --> 00:55:28.880
+So the question is in split brain autoencoder, how does the model know how to predict the other channel given
+
+
+533
+00:55:28.880 --> 00:55:33.340
+for example L channel, the illumination channel,
+
+
+534
+00:55:33.340 --> 00:55:34.720
+lightness channel.
+
+
+535
+00:55:34.720 --> 00:55:39.040
+So let me answer your question with a question.
+
+
+536
+00:55:39.040 --> 00:55:45.400
+When you're training a model to predict classes of objects in the image, how does the encoder
+
+
+537
+00:55:45.400 --> 00:55:51.880
+know what features to extract to predict the class of models?
+
+
+538
+00:55:51.880 --> 00:55:59.280
+Labeled data, because what you're doing is you're back propagating a loss value that is
+
+
+539
+00:55:59.280 --> 00:56:02.280
+calculated around those labels.
+
+
+540
+00:56:02.280 --> 00:56:03.660
+It's the same story here.
+
+
+541
+00:56:03.660 --> 00:56:09.480
+We define the network that takes one of the channels and outputs the other channel.
+
+
+542
+00:56:09.480 --> 00:56:15.060
+How this was trained was by back propagating what the output should be.
+
+
+543
+00:56:15.060 --> 00:56:17.400
+The output was the other channel.
+
+
+544
+00:56:17.400 --> 00:56:20.020
+We do have the other channel in the data.
+
+
+545
+00:56:20.020 --> 00:56:26.460
+So instead of defining the task being a classification of predicting the class of the objects,
+
+
+546
+00:56:26.460 --> 00:56:32.100
+here we define the task to be predicting the color of the pixels.
+
+
+547
+00:56:32.100 --> 00:56:36.980
+And the color of the pixels, we already have them in the data set, so the loss function still
+
+
+548
+00:56:36.980 --> 00:56:40.220
+can be calculated and back propagated.
+
+
+549
+00:56:40.220 --> 00:56:44.540
+So the question is how these outputs are used as input to the decoder.
+
+
+550
+00:56:44.540 --> 00:56:58.660
+So this is, again, a VIT transformer style framework encoder that turns every input to a token as the output that
+
+
+551
+00:56:58.660 --> 00:57:02.700
+is representation of that specific input patch.
+
+
+552
+00:57:02.700 --> 00:57:04.700
+So we've talked about this.
+
+
+553
+00:57:04.700 --> 00:57:12.740
+But then we know that this is not the list of all patches, there are some of the patches that are masked.
+
+
+554
+00:57:12.740 --> 00:57:25.490
+For those that are masked, we also train this encoder outputs a shared mask token, a token that is basically an average token, for example.
+
+
+555
+00:57:25.490 --> 00:57:27.110
+It's a learnable parameter.
+
+
+556
+00:57:27.110 --> 00:57:35.670
+We can't necessarily interpret it, but we can say it's probably something that is similar to a mask like an average token.
+
+
+557
+00:57:35.670 --> 00:57:42.130
+So that's shared mask token is put in the place of those that are missing.
+
+
+558
+00:57:42.130 --> 00:57:46.230
+And then this long vector, long sequence is created.
+
+
+559
+00:57:46.230 --> 00:57:58.540
+Decoder, another transformer framework takes this long set of tokens and outputs those that are projected as the output pixel value.
+
+
+560
+00:58:01.790 --> 00:58:12.600
+Perfect, so we only have 15 minutes and a lot of things
+
+
+561
+00:58:12.600 --> 00:58:14.880
+to cover.
+
+
+562
+00:58:14.880 --> 00:58:24.800
+But I think what I wanted to get out of this session, was for you to understand what pretext tasks are,
+
+
+563
+00:58:24.800 --> 00:58:26.020
+and how we define them.
+
+
+564
+00:58:26.020 --> 00:58:32.720
+And one of the most used frameworks right now is the masked autoencoder, which we actually
+
+
+565
+00:58:32.720 --> 00:58:36.120
+covered to some extent.
+
+
+566
+00:58:36.120 --> 00:58:45.040
+But anyways, I was here that we did look at these transformations, and then we
+
+
+567
+00:58:45.040 --> 00:58:49.280
+know that all of these transformations
+
+
+568
+00:58:49.280 --> 00:58:54.540
+are actually the same object as the original image, just in a different form.
+
+
+569
+00:58:54.540 --> 00:59:02.660
+But then we also have the knowledge that in the data set, we have other objects that look completely different.
+
+
+570
+00:59:02.660 --> 00:59:11.990
+So if I define a task that can say these that belong to the same object, same pixel,
+
+
+571
+00:59:11.990 --> 00:59:18.210
+try to bring them close in the representation space, basically attract them to each other in the representation
+
+
+572
+00:59:18.210 --> 00:59:27.930
+space, and those that are not-- that they do not belong to the same object,
+
+
+573
+00:59:27.930 --> 00:59:34.650
+try to maximize the distance between them in the latent space, basically repel the representation
+
+
+574
+00:59:34.650 --> 00:59:37.130
+of these two images.
+
+
+575
+00:59:37.130 --> 00:59:46.290
+Then this is another task that is often referred to as contrastive learning, contrastive representation learning, and there
+
+
+576
+00:59:46.290 --> 00:59:52.530
+are quite a number of very interesting methods to look at.
+
+
+577
+00:59:52.530 --> 01:00:04.530
+We have sampled there are so many papers in this space, especially around 2019's to 2020's, and so
+
+
+578
+01:00:04.530 --> 01:00:07.010
+on around those years.
+
+
+579
+01:00:07.010 --> 01:00:13.900
+Sinclair McCaw, CBC, and then ultimately dyno, which actually borrows concepts from contrastive learning
+
+
+580
+01:00:13.900 --> 01:00:16.440
+but is not necessarily contrastive learning framework.
+
+
+581
+01:00:19.060 --> 01:00:33.260
+And what we do there is in order to define, attract and repel functions, characteristics or regularize the model based
+
+
+582
+01:00:33.260 --> 01:00:40.500
+on those, we define the reference image as x, and then all of those that are transformations
+
+
+583
+01:00:40.500 --> 01:00:44.140
+of the same as positive samples and all
+
+
+584
+01:00:44.140 --> 01:00:49.940
+of the other objects in the data set, or in the batch as negative samples.
+
+
+585
+01:00:49.940 --> 01:00:58.500
+And these positive and negative samples will basically define a way for us to calculate the loss function.
+
+
+586
+01:00:58.500 --> 01:01:00.740
+How can we do that?
+
+
+587
+01:01:00.740 --> 01:01:02.720
+Assume we have a scoring function.
+
+
+588
+01:01:02.720 --> 01:01:09.290
+We want to get a scoring function that says the score for the reference image encoded version,
+
+
+589
+01:01:09.290 --> 01:01:15.810
+features of the reference image and the features of a positive sample should be larger than the score that is,
+
+
+590
+01:01:15.810 --> 01:01:24.150
+comparing the reference image and the negative samples.
+
+
+591
+01:01:24.150 --> 01:01:35.110
+So with this type of scoring function, if we-- so basically to define this type of scoring function,
+
+
+592
+01:01:35.110 --> 01:01:38.370
+we define a loss function based on that.
+
+
+593
+01:01:38.370 --> 01:01:46.150
+After training the scoring function S, you can see this S is the same as the score
+
+
+594
+01:01:46.150 --> 01:01:48.510
+in the previous slide.
+
+
+595
+01:01:48.510 --> 01:01:58.830
+So if we have that scoring function, now in order to attract and repel, we can use this framework of turn
+
+
+596
+01:01:58.830 --> 01:02:07.260
+them a softmax setup with exp that turn those scores into probability values.
+
+
+597
+01:02:07.260 --> 01:02:17.480
+And then in the denominator, you see all of the other negative samples that are used are considered.
+
+
+598
+01:02:17.480 --> 01:02:21.780
+In order to implement actually we use this we use the batch learning framework.
+
+
+599
+01:02:21.780 --> 01:02:31.120
+All of the other negative samples that belong to other objects in the batch are taken as negative samples, and one of the transform
+
+
+600
+01:02:31.120 --> 01:02:33.540
+is as the positive sample.
+
+
+601
+01:02:33.540 --> 01:02:36.600
+So we define the loss function like this.
+
+
+602
+01:02:36.600 --> 01:02:43.880
+And a score for the positive pair, score for all of the other negative pairs.
+
+
+603
+01:02:43.880 --> 01:02:50.160
+And this function is very similar to what we've actually discussed before.
+
+
+604
+01:02:50.160 --> 01:02:51.840
+Any ideas?
+
+
+605
+01:02:51.840 --> 01:02:54.520
+This is the cross entropy for multi classes.
+
+
+606
+01:02:54.520 --> 01:03:04.990
+So if we have n samples-- sorry n samples, yes, then in this case, we have n samples.
+
+
+607
+01:03:04.990 --> 01:03:11.430
+So the softmax is if you have multiple classes, if you have 10 classes as the output,
+
+
+608
+01:03:11.430 --> 01:03:17.070
+it wants to maximize the score for one of those 10, and minimize for the rest of it.
+
+
+609
+01:03:17.070 --> 01:03:19.070
+It's the same story here.
+
+
+610
+01:03:19.070 --> 01:03:26.050
+We want to maximize this score, but minimize the score between a negative and reference.
+
+
+611
+01:03:26.050 --> 01:03:31.910
+So it's the same concept that we discussed about multi-class classification,
+
+
+612
+01:03:31.910 --> 01:03:37.450
+but put it in the form of formulation of contrastive for this loss function
+
+
+613
+01:03:37.450 --> 01:03:39.610
+as contrastive learning.
+
+
+614
+01:03:39.610 --> 01:03:51.170
+This function is called info NCE or the information Noise Contrastive Estimation loss, which was proposed in this paper.
+
+
+615
+01:03:51.170 --> 01:03:58.890
+And there are a lot of theoretical discussions in the paper that this objective, this loss function
+
+
+616
+01:03:58.890 --> 01:04:04.630
+measures the dependencies, sorry that it's a lower bound
+
+
+617
+01:04:04.630 --> 01:04:07.790
+on mutual information.
+
+
+618
+01:04:07.790 --> 01:04:14.790
+And what mutual information is, when you have two images and you calculate the mutual information between them,
+
+
+619
+01:04:14.790 --> 01:04:21.090
+it's basically measuring the dependencies or shared information between these two images.
+
+
+620
+01:04:21.090 --> 01:04:27.430
+So what we want to do is, we want to maximize shared information between x and x plus,
+
+
+621
+01:04:27.430 --> 01:04:32.330
+but minimize the shared information for x and x minuses.
+
+
+622
+01:04:32.330 --> 01:04:40.130
+So the paper says and again, this will itself take half an hour to go into.
+
+
+623
+01:04:40.130 --> 01:04:47.830
+So you should definitely take a look at the paper if you're interested, that the negative of this loss function
+
+
+624
+01:04:47.830 --> 01:04:52.750
+info NCE, is a lower bound on mutual information between x
+
+
+625
+01:04:52.750 --> 01:04:54.070
+and x plus.
+
+
+626
+01:04:54.070 --> 01:05:03.400
+So a lower bound on mutual information if the negative of it is a lower bound on mutual information.
+
+
+627
+01:05:03.400 --> 01:05:11.940
+If I minimize the info NCE, I'm basically maximizing the mutual information between x and x plus.
+
+
+628
+01:05:11.940 --> 01:05:14.000
+So this is what I really want.
+
+
+629
+01:05:14.000 --> 01:05:23.480
+So that's why we take this as the loss function and start minimizing that value.
+
+
+630
+01:05:23.480 --> 01:05:29.920
+There is also another theoretical aspect in the info NCE paper that says the larger
+
+
+631
+01:05:29.920 --> 01:05:33.300
+the number of negative samples the tighter the bound.
+
+
+632
+01:05:33.300 --> 01:05:38.520
+So it tightens the bound based on the number of negative samples.
+
+
+633
+01:05:38.520 --> 01:05:47.880
+So that's why for training and loss function a neural network with this type of loss function, we need a huge batch size.
+
+
+634
+01:05:47.880 --> 01:05:59.770
+With a larger number of negative samples, we'll get better and much faster training convergence.
+
+
+635
+01:05:59.770 --> 01:06:06.230
+And then this loss function was used in a number of different frameworks.
+
+
+636
+01:06:06.230 --> 01:06:12.190
+And in the next few minutes, I'm just going to tell you what those frameworks are.
+
+
+637
+01:06:12.190 --> 01:06:22.210
+For example, Sinclair is a simple framework for contrastive learning, is basically taking each image,
+
+
+638
+01:06:22.210 --> 01:06:27.110
+do the two transformations of the same image, transfer it into the representation space.
+
+
+639
+01:06:27.110 --> 01:06:36.390
+And what it does is it calculates the cosine similarity between embeddings representations.
+
+
+640
+01:06:36.390 --> 01:06:47.690
+But before doing that, it does a linear or non-linear projection into a set of features z, that calculates the distance
+
+
+641
+01:06:47.690 --> 01:06:49.970
+between those in this space.
+
+
+642
+01:06:49.970 --> 01:06:57.580
+And this is the way that they do this, generating this positive samples.
+
+
+643
+01:06:57.580 --> 01:07:05.020
+And for generating positive samples, all sorts of transformations would make sense.
+
+
+644
+01:07:05.020 --> 01:07:09.700
+The details are basically covered here.
+
+
+645
+01:07:09.700 --> 01:07:15.580
+Generate a positive pair by sampling data augmentation functions.
+
+
+646
+01:07:15.580 --> 01:07:22.660
+So we sample a few of those then we calculate the inverse and see loss on the pairs.
+
+
+647
+01:07:22.660 --> 01:07:32.940
+And this is what we iterate because each sample has 2n multiplied by n samples that we have created.
+
+
+648
+01:07:32.940 --> 01:07:43.140
+So what happens is we take a list of images in the mini batch, in the batch that we have,
+
+
+649
+01:07:43.140 --> 01:07:49.820
+and pass them through encoder for both variations of the same image.
+
+
+650
+01:07:49.820 --> 01:07:56.110
+So each of the images basically will have a transformed version of it.
+
+
+651
+01:07:56.110 --> 01:08:02.830
+And next, so we have sub 2n samples in the batch now.
+
+
+652
+01:08:02.830 --> 01:08:10.550
+And then this means that for each of the samples the next one, these two are positive samples,
+
+
+653
+01:08:10.550 --> 01:08:12.050
+and everything else is negative.
+
+
+654
+01:08:12.050 --> 01:08:16.010
+So for the first one, the second image is positive.
+
+
+655
+01:08:16.010 --> 01:08:17.569
+Everything else is negative.
+
+
+656
+01:08:17.569 --> 01:08:21.310
+For the second one the first is positive and everything else is negative.
+
+
+657
+01:08:21.310 --> 01:08:24.990
+And this repeats for all of the samples there.
+
+
+658
+01:08:24.990 --> 01:08:31.710
+So this is a high level definition of SimCLR.
+
+
+659
+01:08:31.710 --> 01:08:42.510
+Please note that we have in assignment 3, a question related to SimCLR that you will be exploring this framework
+
+
+660
+01:08:42.510 --> 01:08:44.069
+a little bit more.
+
+
+661
+01:08:44.069 --> 01:08:49.790
+But be careful that the definition is slightly different from what the standard definition that I
+
+
+662
+01:08:49.790 --> 01:08:51.120
+presented here.
+
+
+663
+01:08:51.120 --> 01:08:57.080
+And make sure you follow the instructions in the assignment.
+
+
+664
+01:08:57.080 --> 01:08:59.620
+So SimCLR was actually very successful.
+
+
+665
+01:08:59.620 --> 01:09:07.600
+It was able to without the use of labels or-- and then a training a linear classifier
+
+
+666
+01:09:07.600 --> 01:09:13.279
+on top of the features, it was able to surpass
+
+
+667
+01:09:13.279 --> 01:09:22.939
+all of the previous works and even basically generate results comparable to the supervised learning,
+
+
+668
+01:09:22.939 --> 01:09:25.140
+fully supervised learning frameworks.
+
+
+669
+01:09:25.140 --> 01:09:30.420
+Although we need a larger neural network because now we are learning more generic features.
+
+
+670
+01:09:30.420 --> 01:09:38.760
+But in terms of accuracy, this was not as it was comparable to what we had for supervised learning.
+
+
+671
+01:09:38.760 --> 01:09:53.630
+So the interesting thing with SimCLR and some of the results around it was that there are a few choices.
+
+
+672
+01:09:53.630 --> 01:09:58.530
+Actually, let me spend time on the main choices.
+
+
+673
+01:09:58.530 --> 01:10:06.850
+You may have this question of why did we project the features into a new variable instead of using the same representations?
+
+
+674
+01:10:06.850 --> 01:10:16.050
+So this was a design choice that they made in SimCLR, because they rightly so assume that when
+
+
+675
+01:10:16.050 --> 01:10:17.810
+we have an objective function that
+
+
+676
+01:10:17.810 --> 01:10:26.050
+does this contrast between samples, you often lose some more information, some extra information that do not
+
+
+677
+01:10:26.050 --> 01:10:28.070
+help with the contrastive learning framework.
+
+
+678
+01:10:28.070 --> 01:10:36.830
+So in order to preserve all of those extra features, representations are defined as h,
+
+
+679
+01:10:36.830 --> 01:10:42.770
+but then there is this linear or non-linear projection-- in their paper they use non-linear projection,
+
+
+680
+01:10:42.770 --> 01:10:49.540
+to get the z values that they can calculate influencer.
+
+
+681
+01:10:49.540 --> 01:10:52.280
+So that's one important design choice.
+
+
+682
+01:10:52.280 --> 01:10:56.680
+And the other one is I mentioned earlier large batch sizes.
+
+
+683
+01:10:56.680 --> 01:11:04.040
+You need huge batch sizes, larger batch sizes to be able to get better SimCLR performance.
+
+
+684
+01:11:04.040 --> 01:11:08.100
+And we talked about it, how and why this is the case.
+
+
+685
+01:11:08.100 --> 01:11:13.580
+But we can't always do large batch sizes for many of the tasks that we have
+
+
+686
+01:11:13.580 --> 01:11:20.060
+at hand because of constraints in memory and so on.
+
+
+687
+01:11:20.060 --> 01:11:29.920
+And that was why a number of follow ups, for example, mocha was proposed momentum contrastive learning.
+
+
+688
+01:11:29.920 --> 01:11:39.260
+Instead of using the samples, all of the negative samples in the batch, what it does is it creates a queue
+
+
+689
+01:11:39.260 --> 01:11:46.440
+and keeps a history of the negative samples
+
+
+690
+01:11:46.440 --> 01:11:49.260
+across batches over time in the model.
+
+
+691
+01:11:49.260 --> 01:11:57.360
+So it doesn't only depend on the negative samples in the batch, it has a separate queue that is defined
+
+
+692
+01:11:57.360 --> 01:12:01.640
+and keeps a number of negative samples and changes it,
+
+
+693
+01:12:01.640 --> 01:12:13.360
+updates it over time to train, to do the inference loss, the contrastive loss here.
+
+
+694
+01:12:13.360 --> 01:12:19.540
+But because we have this queue, we cannot back propagate because those samples are not in the batch anymore.
+
+
+695
+01:12:19.540 --> 01:12:27.560
+So we cannot back propagate for the negative samples, and that's why it had to separate the encoder
+
+
+696
+01:12:27.560 --> 01:12:30.800
+for positive samples, which are now called query.
+
+
+697
+01:12:30.800 --> 01:12:38.240
+And the negative samples which are now called key in this architecture.
+
+
+698
+01:12:38.240 --> 01:12:51.590
+So the training only impacts encoder and over time the Q encoder, using a momentum m, it updates the key encoder,
+
+
+699
+01:12:51.590 --> 01:12:53.130
+the momentum encoder.
+
+
+700
+01:12:53.130 --> 01:13:01.490
+So this is a framework that has actually been very successful in terms of implementation,
+
+
+701
+01:13:01.490 --> 01:13:03.670
+and follow up versions of it.
+
+
+702
+01:13:03.670 --> 01:13:19.530
+There is a lot of interesting results, but then what they've done was basically tried hybrid versions of using some non-linear projection heads
+
+
+703
+01:13:19.530 --> 01:13:26.010
+and data augmentation from SimCLR and using this mini batch style, the decoupling of the mini batch
+
+
+704
+01:13:26.010 --> 01:13:34.490
+and negative samples from MoCo, and they've shown that actually if you do this together, MoCo version 2,
+
+
+705
+01:13:34.490 --> 01:13:39.950
+it improves the performance by a lot.
+
+
+706
+01:13:39.950 --> 01:13:50.140
+So I will stop here, but there was some notions of CPC, the Contrastive Predictive Coding,
+
+
+707
+01:13:50.140 --> 01:13:55.020
+as another example, that you can look at in the slides.
+
+
+708
+01:13:55.020 --> 01:14:04.580
+And then a better version of MoCo, MoCo version 3 and DINO is also one of the widely used frameworks which actually
+
+
+709
+01:14:04.580 --> 01:14:11.220
+has a similar type of architecture as MoCo,
+
+
+710
+01:14:11.220 --> 01:14:17.640
+but it's not necessarily contrastive learning because now we have students and teacher networks.
+
+
+711
+01:14:17.640 --> 01:14:24.220
+So I'll leave that for a separate discussion, and if you're interested, we can discuss maybe
+
+
+712
+01:14:24.220 --> 01:14:27.520
+in the future slides, in future lectures.
+
+
+713
+01:14:27.520 --> 01:14:35.140
+But anyways, this is also one of the widely used frameworks for extracting features from images and also videos
+
+
+714
+01:14:35.140 --> 01:14:36.990
+sometimes.

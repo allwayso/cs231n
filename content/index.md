@@ -10,3 +10,6 @@ publish: true
 - [Lecture 07: RNN](Lecture07%20RNN)
 - [Lecture 08: Attention and Transformers](Lecture08%20Attention%20and%20Transformers)
 - [[lecture09  Object Detection, Image Segmentation, Visualizing|Lecture 09: Object Detection, Image Segmentation, Visualizing]]
+- [[lecture10 Video Understanding|Lecture 10: Video Understanding]]
+- [[lecture11 Large-Scale Distributed Training|Lecture 11: Large-Scale Distributed Training]]
+- [[lecture12 Self-supervised Learning|Lecture 12: Self-supervised Learning]]
