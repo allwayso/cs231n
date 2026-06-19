@@ -245,6 +245,7 @@ I3D 的核心启示：**利用大规模图像预训练是视频理解的关键**
     <img src="Pasted image 20260615174411.png" width="800" />
     <div style="font-size: 0.85em; color: #888; margin-top: 5px;">图 12：Two Broad Strategies — 修改注意力算子 vs 减少 token 数量</div>
 </div>
+
 ### Strategy A: Modify Attention Operator
 
 #### Divided Space-Time Attention (ViViT)
@@ -363,7 +364,7 @@ AVA Dataset 是一个代表性的时空检测数据集，标注了视频中每�
 
 人类具有在超长时间跨度上处理视觉刺激的非凡能力，但当前的计算机视觉系统能理解长视频吗？
 
-**HourVideo**（NeurIPS 2024）提供了一个评估基准：包含长达 1 小时的 egocentric 视频，提问需要跨时间推理（如"相机佩戴者在锻炼后把 AirPods 放在哪里？""如何从厨房走到后院？"）。结果揭示当前模型与人类之间仍然存在**显著差距**——这将是未来重要的研究方向。
+**HourVideo**（NeurIPS 2024）提供了一个评估基准：包含长达 1 小时的 egocentric 视频，提问需要跨时间推理（如 “ 相机佩戴者在锻炼后把 AirPods 放在哪里？” “ 如何从厨房走到后院？”）。结果揭示当前模型与人类之间仍然存在**显著差距**——这将是未来重要的研究方向。
 
 ---
 
@@ -392,7 +393,8 @@ Lecture 10 覆盖了视频理解的完整技术演进路线：
 | | MViT | 压缩 K/V，逐层减半空间分辨率 |
 | **减少 token** | Tubelets | 时空立方体替代空间 patches，大幅减少 token 数 |
 
-**超越短片段**：
+**长视频任务**：
+
 - **Temporal Action Localization**：在长视频中定位动作时间区间（类比 Faster R-CNN 的时域版本）
 - **Spatio-Temporal Detection**：同时在空间和时间上检测人的动作
 - **Audio-Visual Understanding**：融合视觉和音频，实现音源分离、多模态识别
